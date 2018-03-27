@@ -139,7 +139,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			switch event.Event {
 			case "qr":
 				code := event.Args[0]["code"].(string)
-				bytes, err := qrcode.Encode(code, qrcode.High, 256)
+				bytes, err := qrcode.Encode(code, qrcode.High, 512)
 				if err != nil {
 					panic(err) // REVIEW
 				}
