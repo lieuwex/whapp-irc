@@ -55,7 +55,7 @@ type Chat struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Participants []Contact `json:"participants"`
-	admins       []Contact
+	Admins       []Contact `json:"admins"`
 
 	Joined bool
 }

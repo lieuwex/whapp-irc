@@ -156,9 +156,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				var chat *Chat
 				mapstructure.Decode(event.Args[0], &chat)
 
-				for _, contact := range chat.Participants {
+				for id := range chat.Participants {
+					contact := &chat.Participants[id]
 					isAdmin := false
-					for _, admin := range chat.admins {
+					for _, admin := range chat.Admins {
 						if admin.ID == contact.ID {
 							isAdmin = true
 							break
