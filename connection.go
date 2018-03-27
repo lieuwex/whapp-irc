@@ -183,8 +183,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 					messages := group.Messages
 					for _, msg := range messages { // HACK
-						sender := msg.Sender.Names.Formatted
-						senderSafeName := strings.Replace(sender, " ", "", -1)
+						senderSafeName := msg.Sender.SafeName()
 						message := msg.Content
 
 						own := msg.Own(conn.number)
@@ -217,7 +216,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						}
 
 						for _, line := range strings.Split(message, "\n") {
-							fmt.Printf("\t%s: %s\n", sender, line)
+							fmt.Printf("\t%s: %s\n", msg.Sender.FullName(), line)
 							str := fmt.Sprintf(":%s PRIVMSG %s :%s", senderSafeName, to, line)
 							write(str)
 						}
