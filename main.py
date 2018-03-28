@@ -133,6 +133,8 @@ async def loop(reader, writer):
                     data = await driver.download_media(downloadInfo)
                     str = base64.b64encode(data.getbuffer())
                     ev("download-ready", id, str.decode())
+                elif cmd == 'eval':
+                    eval(msg['args'][0])
             else:
                 for msgGroup in res:
                     ev("unread-messages", await format_msg_group(msgGroup))

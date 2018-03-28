@@ -84,6 +84,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				msg := msg.Params[1]
 
 				if to == "status" {
+					if msg[0] == '`' && msg[len(msg)-1] == '`' {
+						cmd := msg[1 : len(msg)-1]
+						conn.bridge.Write(Command{
+							Command: "eval",
+							Args:    []string{cmd},
+						})
+						continue
+					}
 					fmt.Printf("%s->status: %s\n", conn.nickname, msg)
 					continue
 				}
