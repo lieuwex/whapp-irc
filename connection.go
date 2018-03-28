@@ -163,27 +163,16 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			case "chat":
 				var chat *Chat
 				mapstructure.Decode(event.Args[0], &chat)
-
-				for id := range chat.Participants {
-					contact := &chat.Participants[id]
-					isAdmin := false
-					for _, admin := range chat.Admins {
-						if admin.ID == contact.ID {
-							isAdmin = true
-							break
-						}
-					}
-					contact.IsAdmin = isAdmin
-				}
-
-				conn.Chats = append(conn.Chats, chat)
-				fmt.Printf("%s\t\t\t\t%d participants\n", chat.Identifier(), len(chat.Participants))
+				conn.addChat(chat)
 
 			case "unread-messages":
 				var msgGroups []MessageGroup
 				mapstructure.Decode(event.Args, &msgGroups)
 				for _, group := range msgGroups {
 					chat := conn.GetChatByID(group.Chat.ID)
+					if chat == nil {
+						chat = conn.addChat(&group.Chat)
+					}
 
 					if chat.IsGroupChat() && !chat.Joined {
 						conn.joinChat(chat)
@@ -305,4 +294,32 @@ func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 		}
 	}
 	return nil
+}
+
+func (conn *Connection) addChat(chat *Chat) *Chat {
+	for id := range chat.Participants {
+		contact := &chat.Participants[id]
+		isAdmin := false
+		for _, admin := range chat.Admins {
+			if admin.ID == contact.ID {
+				isAdmin = true
+				break
+			}
+		}
+		contact.IsAdmin = isAdmin
+	}
+
+	fmt.Printf("%s\t\t\t\t%d participants\n", chat.Identifier(), len(chat.Participants))
+
+	for i, c := range conn.Chats {
+		if c.ID == chat.ID {
+			conn.Chats[i] = chat
+			goto done
+		}
+	}
+	conn.Chats = append(conn.Chats, chat)
+	goto done
+
+done:
+	return chat
 }
