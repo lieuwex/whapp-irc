@@ -3,7 +3,6 @@ package main
 import (
 	"regexp"
 	"strings"
-	"time"
 )
 
 const MessageIDListSize = 750
@@ -86,10 +85,10 @@ func (c *Chat) AddMessageID(id string) {
 }
 
 type Message struct {
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-	Sender    Contact   `json:"sender"`
-	Body      string    `json:"body"`
+	ID        string  `json:"id"`
+	Timestamp float64 `json:"timestamp"`
+	Sender    Contact `json:"sender"`
+	Body      string  `json:"body"`
 
 	IsSentByMe        bool `json:"isSentByMe"`
 	IsSentByMeFromWeb bool `json:"isSentByMeFromWeb"`

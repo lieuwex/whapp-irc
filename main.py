@@ -78,7 +78,7 @@ async def format_msg(msg):
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],
-            "timestamp": format_date(msg.timestamp),
+            "timestamp": msg.timestamp.timestamp(),
             "sender": format_contact(msg.sender),
             "filename": msg.filename,
             "body": str,
@@ -96,7 +96,7 @@ async def format_msg(msg):
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],
-            "timestamp": format_date(msg.timestamp),
+            "timestamp": msg.timestamp.timestamp(),
             "sender": format_contact(msg.sender),
             "body": repr(msg),
         }
@@ -106,7 +106,7 @@ async def format_msg(msg):
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],
-            "timestamp": format_date(msg.timestamp),
+            "timestamp": msg.timestamp.timestamp(),
             "sender": format_contact(msg.sender),
             "body": body,
         }
