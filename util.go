@@ -1,10 +1,12 @@
 package main
 
 import (
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/h2non/filetype"
+	"github.com/mozillazg/go-unidecode"
 )
 
 func strTimestamp() string {
@@ -28,4 +30,11 @@ func getFileName(bytes []byte) string {
 		ts += "." + ext
 	}
 	return ts
+}
+
+var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
+
+func IRCsafeString(str string) string {
+	str = unidecode.Unidecode(str)
+	return unsafeRegex.ReplaceAllLiteralString(str, "")
 }

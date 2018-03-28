@@ -7,7 +7,6 @@ import (
 )
 
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
-var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
 var nonNumberRegex = regexp.MustCompile(`[^\d]`)
 
 type Command struct {
@@ -39,11 +38,11 @@ func (c *Contact) FullName() string {
 
 func (c *Contact) SafeName() string {
 	str := c.FullName()
-	if numberRegex.MatchString(str) && c.Names.Push != "" {
+	if numberRegex.MatchString(str) && IRCsafeString(c.Names.Push) != "" {
 		str = c.Names.Push
 	}
 
-	return unsafeRegex.ReplaceAllLiteralString(str, "")
+	return IRCsafeString(str)
 }
 
 func (c *Contact) Self(number string) bool {
@@ -65,7 +64,7 @@ func (c *Chat) IsGroupChat() bool {
 }
 
 func (c *Chat) SafeName() string {
-	return unsafeRegex.ReplaceAllLiteralString(c.Name, "")
+	return IRCsafeString(c.Name)
 }
 
 func (c *Chat) Identifier() string {

@@ -14,6 +14,15 @@
   revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
+  name = "github.com/mozillazg/go-unidecode"
+  packages = [
+    ".",
+    "table"
+  ]
+  revision = "7ab3c72180eeb79ccb8746137e14d6b0a60dd685"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/skip2/go-qrcode"
   packages = [
@@ -44,6 +53,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "86a3c4d3f604e6705f5b9351121cf5f8891721cf5207d41e02368225fd47ac93"
+  inputs-digest = "93d76bd0672078d4fe96a862aa584ea3f30584642e9fccc1d7473e7b94f4ac67"
   solver-name = "gps-cdcl"
   solver-version = 1
