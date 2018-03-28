@@ -125,8 +125,7 @@ async def loop(reader, writer):
                     chatId = msg['args'][0]
                     content = msg['args'][1]
 
-                    chat = await driver.get_chat_from_id(chatId)
-                    chat.send_message(content)
+                    await driver.chat_send_message(chatId, content)
                 elif cmd == 'download':
                     id = msg['args'][0]
                     downloadInfo = msg['args'][1]
