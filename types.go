@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const MessageIDListSize = 750
+
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 var nonNumberRegex = regexp.MustCompile(`[^\d]`)
 
@@ -56,7 +58,8 @@ type Chat struct {
 	Participants []Contact `json:"participants"`
 	Admins       []Contact `json:"admins"`
 
-	Joined bool
+	Joined     bool
+	MessageIDs []string
 }
 
 func (c *Chat) IsGroupChat() bool {
@@ -75,17 +78,27 @@ func (c *Chat) Identifier() string {
 	return prefix + c.SafeName()
 }
 
-type Message struct {
-	Timestamp time.Time              `json:"timestamp"`
-	Sender    Contact                `json:"sender"`
-	Content   string                 `json:"content"`
-	Filename  string                 `json:"filename"`
-	Caption   string                 `json:"caption"`
-	Keys      map[string]interface{} `json:"keys"`
+func (c *Chat) AddMessageID(id string) {
+	if len(c.MessageIDs) >= MessageIDListSize {
+		c.MessageIDs = c.MessageIDs[1:]
+	}
+	c.MessageIDs = append(c.MessageIDs, id)
 }
 
-func (m *Message) Own(number string) bool {
-	return m.Sender.Self(number)
+type Message struct {
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Sender    Contact   `json:"sender"`
+	Body      string    `json:"body"`
+
+	IsSentByMe        bool `json:"isSentByMe"`
+	IsSentByMeFromWeb bool `json:"isSentByMeFromWeb"`
+
+	QuotedMessageObject *Message `json:"quotedMsgObj" mapstructure:"quotedMsgObj"`
+
+	Filename string                 `json:"filename"`
+	Caption  string                 `json:"caption"`
+	Keys     map[string]interface{} `json:"keys"`
 }
 
 type MessageGroup struct {

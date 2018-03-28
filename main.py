@@ -60,21 +60,28 @@ def format_date(date):
 
 
 async def format_msg(msg):
-    content = "--- removed message ---"
+    body = "--- removed message ---"
     if hasattr(msg, 'content'):
-        content = msg.content
+        body = msg.content
 
     if isinstance(msg, MediaMessage):
-        data = await driver.download_media(msg)
-        str = base64.b64encode(data.getbuffer())
+        try:
+            data = await driver.download_media(msg)
+            str = base64.b64encode(data.getbuffer()).decode()
+        except:
+            str = ""
 
         caption = msg._js_obj["caption"]
 
         return {
+            "id": msg.id,
+            "isSentByMe": msg._js_obj["isSentByMe"],
+            "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
+            "quotedMsgObj": msg._js_obj["quotedMsgObj"],
             "timestamp": format_date(msg.timestamp),
             "sender": format_contact(msg.sender),
             "filename": msg.filename,
-            "content": str.decode(),
+            "body": str,
             "caption": caption,
             # "keys": {
             #     "client_url": msg.client_url,
@@ -85,15 +92,23 @@ async def format_msg(msg):
     elif isinstance(msg, NotificationMessage):
         # TODO
         return {
+            "id": msg.id,
+            "isSentByMe": msg._js_obj["isSentByMe"],
+            "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
+            "quotedMsgObj": msg._js_obj["quotedMsgObj"],
             "timestamp": format_date(msg.timestamp),
             "sender": format_contact(msg.sender),
-            "content": repr(msg),
+            "body": repr(msg),
         }
     elif isinstance(msg, Message):
         return {
+            "id": msg.id,
+            "isSentByMe": msg._js_obj["isSentByMe"],
+            "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
+            "quotedMsgObj": msg._js_obj["quotedMsgObj"],
             "timestamp": format_date(msg.timestamp),
             "sender": format_contact(msg.sender),
-            "content": content,
+            "body": body,
         }
 
 
@@ -107,7 +122,7 @@ async def format_msg_group(msgGroup):
 async def loop(reader, writer):
     while True:
         done, pending = await wait([
-            driver.get_unread(include_me=False, include_notifications=False),
+            driver.get_unread(include_me=True, include_notifications=False),
             # driver.get_unread(include_me=True, include_notifications=True),
             reader.readline(),
         ], return_when=FIRST_COMPLETED)

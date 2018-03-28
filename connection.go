@@ -179,24 +179,29 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					}
 
 					messages := group.Messages
+					fmt.Printf("%#v\n", chat)
 					for _, msg := range messages { // HACK
-						senderSafeName := msg.Sender.SafeName()
-						message := msg.Content
+						chat.AddMessageID(msg.ID)
+						fmt.Printf("\t%#v\n", msg)
 
-						own := msg.Own(conn.number)
-						if own {
+						senderSafeName := msg.Sender.SafeName()
+						message := msg.Body
+
+						if msg.IsSentByMeFromWeb {
+							continue
+						} else if msg.IsSentByMe {
 							senderSafeName = conn.nickname
 						}
 
 						var to string
-						if chat.IsGroupChat() || own {
+						if chat.IsGroupChat() || msg.IsSentByMe {
 							to = chat.Identifier()
 						} else {
 							to = conn.nickname
 						}
 
 						if msg.Filename != "" {
-							bytes, err := base64.StdEncoding.DecodeString(msg.Content)
+							bytes, err := base64.StdEncoding.DecodeString(msg.Body)
 							if err != nil {
 								fmt.Printf("err base64 %s\n", err.Error())
 								continue
@@ -210,6 +215,12 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 							if msg.Caption != "" {
 								message += " " + msg.Caption
 							}
+						}
+
+						if msg.QuotedMessageObject != nil {
+							line := "> " + strings.SplitN(msg.QuotedMessageObject.Body, "\n", 1)[0]
+							str := fmt.Sprintf(":%s PRIVMSG %s :%s", senderSafeName, to, line)
+							write(str)
 						}
 
 						for _, line := range strings.Split(message, "\n") {
