@@ -156,11 +156,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				if err != nil {
 					panic(err) // REVIEW
 				}
-				path, err := fs.AddBlob("qr-"+strTimestamp(), bytes)
+
+				f, err := fs.AddBlob(strTimestamp(), "qr-"+strTimestamp(), bytes)
 				if err != nil {
 					panic(err) // REVIEW
 				}
-				status("Scan this QR code: " + path)
+
+				status("Scan this QR code: " + f.URL)
 
 			case "ok":
 				status("ok! id=" + event.Args[0]["id"].(string))
@@ -190,7 +192,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						fmt.Printf("\t%#v\n", msg)
 
 						senderSafeName := msg.Sender.SafeName()
-						message := msg.Body
 
 						if msg.IsSentByMeFromWeb {
 							continue
@@ -205,7 +206,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 							to = conn.nickname
 						}
 
-						if msg.IsMedia() {
+						if msg.IsMedia {
 							if msg.Body == "" {
 								continue
 							}
@@ -215,19 +216,16 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 								fmt.Printf("err base64 %s\n", err.Error())
 								continue
 							}
-							message, err = fs.AddBlob(getFileName(bytes), bytes)
+							_, err = fs.AddBlob(msg.ID, getFileName(bytes), bytes)
 							if err != nil {
 								fmt.Printf("err addblob %s\n", err.Error())
 								continue
 							}
-
-							if msg.Caption != "" {
-								message += " " + msg.Caption
-							}
 						}
+						message := msg.Content()
 
 						if msg.QuotedMessageObject != nil {
-							line := "> " + strings.SplitN(msg.QuotedMessageObject.Body, "\n", 1)[0]
+							line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 1)[0]
 							str := fmt.Sprintf(":%s PRIVMSG %s :%s", senderSafeName, to, line)
 							write(str)
 						}

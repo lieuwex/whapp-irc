@@ -86,13 +86,16 @@ func (c *Chat) AddMessageID(id string) {
 
 type Message struct {
 	ID        string  `json:"id"`
-	Type      string  `json:"type"`
 	Timestamp float64 `json:"timestamp"`
 	Sender    Contact `json:"sender"`
 	Body      string  `json:"body"`
 
 	IsSentByMe        bool `json:"isSentByMe"`
 	IsSentByMeFromWeb bool `json:"isSentByMeFromWeb"`
+
+	IsMedia        bool `json:"isMedia"`
+	IsNotification bool `json:"isNotif"`
+	IsText         bool `json:"isText"`
 
 	QuotedMessageObject *Message `json:"quotedMsgObj" mapstructure:"quotedMsgObj"`
 
@@ -101,11 +104,24 @@ type Message struct {
 	Keys     map[string]interface{} `json:"keys"`
 }
 
-func (msg *Message) IsMedia() bool {
-	return msg.Type == "media"
+func (msg *Message) Content() string {
+	res := msg.Body
+
+	if msg.IsMedia {
+		res = "-- file --"
+		if f := fs.IDToPath[msg.ID]; f != nil {
+			res = f.URL
+		}
+
+		if msg.Caption != "" {
+			res += " " + msg.Caption
+		}
+	}
+
+	return res
 }
 
 type MessageGroup struct {
-	Chat     Chat      `json:"chat"`
-	Messages []Message `json:"messages"`
+	Chat     Chat       `json:"chat"`
+	Messages []*Message `json:"messages"`
 }
