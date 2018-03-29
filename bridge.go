@@ -73,6 +73,11 @@ func (b *Bridge) Stop() bool {
 	return true
 }
 
+func (b *Bridge) Restart() {
+	b.Stop()
+	b.Start()
+}
+
 func (b *Bridge) ProvideSocket(socket *net.TCPConn) {
 	b.socket = socket
 	reader := bufio.NewReader(socket)
@@ -81,8 +86,7 @@ func (b *Bridge) ProvideSocket(socket *net.TCPConn) {
 		bytes, err := reader.ReadBytes('\n')
 		if err != nil {
 			fmt.Println("connection broken, restarting main.py")
-			b.Stop()
-			b.Start()
+			b.Restart()
 			return
 		}
 
