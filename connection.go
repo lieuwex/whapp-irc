@@ -146,7 +146,12 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			switch event.Event {
 			case "qr":
-				code := event.Args[0]["code"].(string)
+				code, ok := event.Args[0]["code"].(string)
+				if !ok {
+					fmt.Println("qr code not loaded correctly or smth, restarting bridge.")
+					conn.bridge.Restart()
+				}
+
 				bytes, err := qrcode.Encode(code, qrcode.High, 512)
 				if err != nil {
 					panic(err) // REVIEW
