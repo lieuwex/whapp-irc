@@ -224,15 +224,17 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						}
 						message := msg.Content()
 
+						date := msg.Time().UTC().Format("2006-01-02T15:04:05.000Z")
+
 						if msg.QuotedMessageObject != nil {
 							line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 1)[0]
-							str := fmt.Sprintf(":%s PRIVMSG %s :%s", senderSafeName, to, line)
+							str := fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", date, senderSafeName, to, line)
 							write(str)
 						}
 
 						for _, line := range strings.Split(message, "\n") {
 							fmt.Printf("\t%s: %s\n", msg.Sender.FullName(), line)
-							str := fmt.Sprintf(":%s PRIVMSG %s :%s", senderSafeName, to, line)
+							str := fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", date, senderSafeName, to, line)
 							write(str)
 						}
 					}
