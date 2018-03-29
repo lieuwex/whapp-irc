@@ -157,7 +157,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					panic(err) // REVIEW
 				}
 
-				f, err := fs.AddBlob(strTimestamp(), "qr-"+strTimestamp(), bytes)
+				f, err := fs.AddBlob("", "qr-"+strTimestamp(), bytes)
 				if err != nil {
 					panic(err) // REVIEW
 				}

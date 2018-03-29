@@ -68,7 +68,9 @@ func (fs *FileServer) AddBlob(messageID string, filename string, bytes []byte) (
 		return nil, err
 	}
 
-	fs.IDToPath[messageID] = f
+	if messageID != "" {
+		fs.IDToPath[messageID] = f
+	}
 	return f, nil
 }
 
