@@ -75,6 +75,7 @@ async def format_msg(msg):
 
         return {
             "id": msg.id,
+            "type": "media",
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],
@@ -93,6 +94,7 @@ async def format_msg(msg):
         # TODO
         return {
             "id": msg.id,
+            "type": "notification",
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],
@@ -103,6 +105,7 @@ async def format_msg(msg):
     elif isinstance(msg, Message):
         return {
             "id": msg.id,
+            "type": "text",
             "isSentByMe": msg._js_obj["isSentByMe"],
             "isSentByMeFromWeb": msg._js_obj["isSentByMeFromWeb"],
             "quotedMsgObj": msg._js_obj["quotedMsgObj"],

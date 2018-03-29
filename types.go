@@ -86,6 +86,7 @@ func (c *Chat) AddMessageID(id string) {
 
 type Message struct {
 	ID        string  `json:"id"`
+	Type      string  `json:"type"`
 	Timestamp float64 `json:"timestamp"`
 	Sender    Contact `json:"sender"`
 	Body      string  `json:"body"`
@@ -98,6 +99,10 @@ type Message struct {
 	Filename string                 `json:"filename"`
 	Caption  string                 `json:"caption"`
 	Keys     map[string]interface{} `json:"keys"`
+}
+
+func (msg *Message) IsMedia() bool {
+	return msg.Type == "media"
 }
 
 type MessageGroup struct {

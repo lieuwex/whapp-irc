@@ -200,7 +200,11 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 							to = conn.nickname
 						}
 
-						if msg.Filename != "" {
+						if msg.IsMedia() {
+							if msg.Body == "" {
+								continue
+							}
+
 							bytes, err := base64.StdEncoding.DecodeString(msg.Body)
 							if err != nil {
 								fmt.Printf("err base64 %s\n", err.Error())
