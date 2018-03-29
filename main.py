@@ -113,9 +113,13 @@ async def format_msg(msg):
 
 
 async def format_msg_group(msgGroup):
+    res, _ = await wait([format_msg(m) for m in msgGroup.messages])
+    res = [x.result() for x in list(res)]
+    res.sort(key=lambda x: x['timestamp'])
+
     return {
         "chat": format_chat(msgGroup.chat),
-        "messages": [await format_msg(m) for m in sorted(msgGroup.messages, key=lambda x: x.timestamp)]
+        "messages": res,
     }
 
 
