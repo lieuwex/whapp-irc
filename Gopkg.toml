@@ -36,3 +36,7 @@
 [[constraint]]
   name = "github.com/mozillazg/go-unidecode"
   version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"

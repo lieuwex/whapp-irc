@@ -23,6 +23,12 @@
   version = "v0.1.0"
 
 [[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/skip2/go-qrcode"
   packages = [
@@ -53,6 +59,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "93d76bd0672078d4fe96a862aa584ea3f30584642e9fccc1d7473e7b94f4ac67"
+  inputs-digest = "2888c68a9f096423289c116e23bbf61227cbe644067476a6d8313293ef37e829"
   solver-name = "gps-cdcl"
   solver-version = 1

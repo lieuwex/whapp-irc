@@ -3,10 +3,12 @@ package main
 import (
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/h2non/filetype"
 	"github.com/mozillazg/go-unidecode"
+	"github.com/satori/go.uuid"
 )
 
 func strTimestamp() string {
@@ -23,13 +25,15 @@ func getExtension(bytes []byte) string {
 }
 
 func getFileName(bytes []byte) string {
-	ext := getExtension(bytes)
+	uid := uuid.NewV4().String()
+	fname := strings.Replace(uid, "-", "", -1)
 
-	ts := strTimestamp()
+	ext := getExtension(bytes)
 	if ext != "" {
-		ts += "." + ext
+		fname += "." + ext
 	}
-	return ts
+
+	return fname
 }
 
 var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
