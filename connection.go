@@ -227,7 +227,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						date := msg.Time().UTC().Format("2006-01-02T15:04:05.000Z")
 
 						if msg.QuotedMessageObject != nil {
-							line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 1)[0]
+							line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 2)[0]
 							str := fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", date, senderSafeName, to, line)
 							write(str)
 						}
