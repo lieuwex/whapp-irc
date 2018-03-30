@@ -131,6 +131,18 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 				// TODO: some way that we don't rejoin a person later.
 				chat.Joined = false
+
+			case "LIST":
+				// TODO: support args
+				for _, c := range conn.Chats {
+					nParticipants := len(c.Participants)
+					if !c.IsGroupChat {
+						nParticipants = 2
+					}
+
+					write(fmt.Sprintf(":whapp-irc 322 %s %s %d :%s", conn.nickname, c.Identifier(), nParticipants, c.Name))
+				}
+				write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.nickname))
 			}
 		}
 	}()
