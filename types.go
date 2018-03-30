@@ -53,17 +53,15 @@ func (c *Contact) Self(number string) bool {
 }
 
 type Chat struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+
+	IsGroupChat  bool      `json:"isGroupChat"`
 	Participants []Contact `json:"participants"`
 	Admins       []Contact `json:"admins"`
 
 	Joined     bool
 	MessageIDs []string
-}
-
-func (c *Chat) IsGroupChat() bool {
-	return len(c.Participants) > 0
 }
 
 func (c *Chat) SafeName() string {
@@ -72,7 +70,7 @@ func (c *Chat) SafeName() string {
 
 func (c *Chat) Identifier() string {
 	prefix := ""
-	if c.IsGroupChat() {
+	if c.IsGroupChat {
 		prefix = "#"
 	}
 	return prefix + c.SafeName()

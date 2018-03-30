@@ -181,7 +181,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						chat = conn.addChat(&group.Chat)
 					}
 
-					if chat.IsGroupChat() && !chat.Joined {
+					if chat.IsGroupChat && !chat.Joined {
 						conn.joinChat(chat)
 					}
 
@@ -200,7 +200,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 						}
 
 						var to string
-						if chat.IsGroupChat() || msg.IsSentByMe {
+						if chat.IsGroupChat || msg.IsSentByMe {
 							to = chat.Identifier()
 						} else {
 							to = conn.nickname
@@ -250,7 +250,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 func (conn *Connection) joinChat(chat *Chat) error {
 	if chat == nil {
 		return fmt.Errorf("chat is nil")
-	} else if !chat.IsGroupChat() {
+	} else if !chat.IsGroupChat {
 		return fmt.Errorf("not a group chat")
 	} else if chat.Joined {
 		return nil

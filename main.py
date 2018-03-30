@@ -45,11 +45,13 @@ def format_chat(chat):
         return {
             "id": chat.id,
             "name": chat.name,
+            "isGroupChat": False,
         }
     elif isinstance(chat, GroupChat):
         return {
             "id": chat.id,
             "name": chat.name,
+            "isGroupChat": True,
             "participants": [format_contact(c) for c in chat.get_participants()],
             "admins": [format_contact(c) for c in chat.get_admins()],
         }
