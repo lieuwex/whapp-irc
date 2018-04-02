@@ -6,17 +6,19 @@ from webwhatsapi.objects.chat import UserChat, GroupChat
 import logging
 import json
 import base64
-from asyncio import get_event_loop, sleep, gather, open_connection, wait, FIRST_COMPLETED, CancelledError
+import asyncio
 
 logger = logging.getLogger('whapp-irc')
 logger.setLevel(logging.DEBUG)
 
-evloop = get_event_loop()
+evloop = asyncio.get_event_loop()
 driver = WhatsAPIDriverAsync(username="whapp-user", logger=logger, loop=evloop)
 print(dir(driver))
 
 reader = None
 writer = None
+
+driverLock = asyncio.Lock()
 
 
 def ev(event, *arg):
@@ -118,7 +120,7 @@ async def format_msg(msg):
 
 
 async def format_msg_group(msgGroup):
-    res, _ = await wait([format_msg(m) for m in msgGroup.messages])
+    res, _ = await asyncio.wait([format_msg(m) for m in msgGroup.messages])
     res = [x.result() for x in list(res)]
     res.sort(key=lambda x: x['timestamp'])
 
@@ -128,48 +130,54 @@ async def format_msg_group(msgGroup):
     }
 
 
-async def loop(reader, writer):
+async def loopReceive(reader, writer):
     while True:
-        done, pending = await wait([
-            driver.get_unread(include_me=True, include_notifications=False),
-            # driver.get_unread(include_me=True, include_notifications=True),
-            reader.readline(),
-        ], return_when=FIRST_COMPLETED)
+        res = await reader.readline()
+        msg = json.loads(res)
+        cmd = msg['command']
 
-        while pending:
-            pending.pop().cancel()
+        if cmd == "send":
+            chatId = msg['args'][0]
+            content = msg['args'][1]
+            replyID = msg['args'][2]
 
-        while done:
-            res = done.pop().result()
+            with (await driverLock):
+                await driver.chat_send_message(chatId, content, replyID)
+                # ev("ok", {"id": "msg_send"})
 
-            if isinstance(res, bytes):
-                msg = json.loads(res)
-                cmd = msg['command']
-                if cmd == "send":
-                    chatId = msg['args'][0]
-                    content = msg['args'][1]
+        elif cmd == 'download':
+            id = msg['args'][0]
+            downloadInfo = msg['args'][1]
+            data = await driver.download_media(downloadInfo)
+            str = base64.b64encode(data.getbuffer())
+            ev("download-ready", id, str.decode())
 
-                    await driver.chat_send_message(chatId, content)
-                elif cmd == 'download':
-                    id = msg['args'][0]
-                    downloadInfo = msg['args'][1]
-                    data = await driver.download_media(downloadInfo)
-                    str = base64.b64encode(data.getbuffer())
-                    ev("download-ready", id, str.decode())
-                elif cmd == 'eval':
-                    eval(msg['args'][0])
-            else:
-                for msgGroup in res:
-                    ev("unread-messages", await format_msg_group(msgGroup))
+        elif cmd == 'eval':
+            eval(msg['args'][0])
 
-        await sleep(.1, loop=evloop)
+
+async def handleMessageGroup(msgGroup):
+    ev("unread-messages", await format_msg_group(msgGroup))
+
+
+async def loopMessages(reader, writer):
+    while True:
+        with (await driverLock):
+            # res = await driver.get_unread(include_me=True, include_notifications=True)
+            res = await driver.get_unread(include_me=True, include_notifications=False)
+
+        for msgGroup in res:
+            asyncio.ensure_future(handleMessageGroup(msgGroup), loop=evloop)
+            handleMessageGroup(msgGroup)
+
+        await asyncio.sleep(.5, loop=evloop)
 
 
 async def get_qr_plain():
     try:
         fut = driver.loop.run_in_executor(driver._pool_executor, driver._driver.get_qr_plain)
         return await fut
-    except CancelledError:
+    except asyncio.CancelledError:
         fut.cancel()
         raise
 
@@ -180,20 +188,22 @@ async def setup():
     port = sys.argv[1]
     id = sys.argv[2] + '\n'
 
-    reader, writer = await open_connection('127.0.0.1', port, loop=evloop)
+    reader, writer = await asyncio.open_connection('127.0.0.1', port, loop=evloop)
     writer.write(id.encode())
 
     print(driver)
 
-    await sleep(2, loop=evloop)
     await driver.connect()
     qr = await get_qr_plain()
     ev("qr", {"code": qr})
     await driver.wait_for_login()
-    ev("ok", {"id": "qr"})
+    ev("ok", {"id": "login"})
     async for c in driver.get_all_chats():
         ev("chat", format_chat(c))
 
-    await loop(reader, writer)
+    await asyncio.wait([
+        loopReceive(reader, writer),
+        loopMessages(reader, writer),
+    ], return_when=asyncio.FIRST_COMPLETED)
 
 evloop.run_until_complete(setup())
