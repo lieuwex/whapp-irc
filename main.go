@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -24,42 +21,6 @@ func handleSocket(socket *net.TCPConn) {
 		fmt.Printf("error while making connection: %s\n", err.Error())
 	}
 	go conn.BindSocket(socket)
-}
-
-func listenInternalSockets() {
-	addr, err := net.ResolveTCPAddr("tcp", ":1337")
-	if err != nil {
-		panic(err)
-	}
-
-	listener, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
-	}
-
-	for {
-		socket, err := listener.AcceptTCP()
-		if err != nil {
-			log.Printf("%#v", err)
-			continue
-		}
-		reader := bufio.NewReader(socket)
-
-		l, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
-		}
-		id, _ := strconv.Atoi(strings.TrimSpace(l))
-
-		bridge := Bridges[id]
-		if bridge == nil {
-			// TODO
-			log.Printf("%#v", bridge)
-			continue
-		}
-
-		go bridge.ProvideSocket(socket)
-	}
 }
 
 func main() {
@@ -79,15 +40,13 @@ func main() {
 	}
 
 	var err error
-	fs, err = MakeFileServer(host, fileServerPort, "files")
+	fs, err = MakeFileServer("localhost", "3000", "files")
 	if err != nil {
 		panic(err)
 	}
 	go fs.Start()
 
-	go listenInternalSockets()
-
-	addr, err := net.ResolveTCPAddr("tcp", host+":"+ircPort)
+	addr, err := net.ResolveTCPAddr("tcp", ":6060")
 	if err != nil {
 		panic(err)
 	}

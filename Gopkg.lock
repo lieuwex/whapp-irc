@@ -2,6 +2,75 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/chromedp/cdproto"
+  packages = [
+    ".",
+    "accessibility",
+    "animation",
+    "applicationcache",
+    "audits",
+    "browser",
+    "cachestorage",
+    "cdp",
+    "css",
+    "database",
+    "debugger",
+    "deviceorientation",
+    "dom",
+    "domdebugger",
+    "domsnapshot",
+    "domstorage",
+    "emulation",
+    "headlessexperimental",
+    "heapprofiler",
+    "indexeddb",
+    "input",
+    "inspector",
+    "io",
+    "layertree",
+    "log",
+    "memory",
+    "network",
+    "overlay",
+    "page",
+    "performance",
+    "profiler",
+    "runtime",
+    "security",
+    "serviceworker",
+    "storage",
+    "systeminfo",
+    "target",
+    "tethering",
+    "tracing"
+  ]
+  revision = "dfcd948f5402632d92038cc1138b6f041a6cbc32"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/chromedp/chromedp"
+  packages = [
+    ".",
+    "client",
+    "kb",
+    "runner"
+  ]
+  revision = "f683cfc4c190d6a24ca66ee436184b533fd126b8"
+
+[[projects]]
+  name = "github.com/disintegration/imaging"
+  packages = ["."]
+  revision = "fd34ef7671b12cdf1b024d98c6b327b2770d32c4"
+  version = "v1.4.1"
+
+[[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   name = "github.com/h2non/filetype"
   packages = ["."]
   revision = "cc14fdc9ca0e4c2bafad7458f6ff79fd3947cfbb"
@@ -9,9 +78,32 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/mitchellh/mapstructure"
+  name = "github.com/knq/snaker"
   packages = ["."]
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "d9ad1e7f342a5b58202aa92c5f1106d7bb8b9c73"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/knq/sysutil"
+  packages = ["."]
+  revision = "0218e141a794643e8c0fa283b9cd076fc0df662d"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [
+    ".",
+    "buffer",
+    "jlexer",
+    "jwriter"
+  ]
+  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+
+[[projects]]
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "6c771bb9887719704b210e87e934f08be014bdb1"
+  version = "v1.6.0"
 
 [[projects]]
   name = "github.com/mozillazg/go-unidecode"
@@ -39,6 +131,16 @@
   revision = "cf5f9fa2f0d847edb8e038db7ed975e239095e1a"
 
 [[projects]]
+  branch = "master"
+  name = "golang.org/x/image"
+  packages = [
+    "bmp",
+    "tiff",
+    "tiff/lzw"
+  ]
+  revision = "f3a9b89b59def9194717c1d0bd4c0d08fa1afa7b"
+
+[[projects]]
   name = "gopkg.in/h2non/filetype.v1"
   packages = [
     "matchers",
@@ -59,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2888c68a9f096423289c116e23bbf61227cbe644067476a6d8313293ef37e829"
+  inputs-digest = "8e6c27b51ad82289131450adb63a8fe0abbba0d02315a43a7cea9d5e081096d9"
   solver-name = "gps-cdcl"
   solver-version = 1

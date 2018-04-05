@@ -1,40 +1,29 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"context"
 	"net"
-	"os"
-	"os/exec"
-	"strconv"
+	"whapp-irc/whapp"
 )
 
 type Bridge struct {
-	Chan chan Event
+	WI *whapp.WhappInstance
 
 	started bool
-	cmd     *exec.Cmd
-	outFile *os.File
-	id      int
+	ctx     context.Context
+	cancel  context.CancelFunc
 
 	socket *net.TCPConn
 }
 
-var Bridges = make(map[int]*Bridge)
-
 func MakeBridge() *Bridge {
-	id := len(Bridges)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	res := &Bridge{
-		Chan: make(chan Event),
-
 		started: false,
-		id:      id,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
-
-	Bridges[id] = res
 
 	return res
 }
@@ -44,18 +33,15 @@ func (b *Bridge) Start() bool {
 		return false
 	}
 
-	b.cmd = exec.Command(
-		"/usr/local/bin/python3",
-		"./main.py",
-		"1337",
-		strconv.Itoa(b.id),
-	)
-	b.outFile, _ = ioutil.TempFile("./", "stdout-main.py-")
-	b.cmd.Stdout = b.outFile
-	b.cmd.Stderr = b.outFile
-	b.cmd.Start()
+	wi, err := whapp.MakeWhappInstance(b.ctx)
 
 	b.started = true
+	if err != nil {
+		println("error while making instance")
+		b.Restart()
+	}
+
+	b.WI = wi
 	return true
 }
 
@@ -64,10 +50,7 @@ func (b *Bridge) Stop() bool {
 		return false
 	}
 
-	// TODO: use context
-	b.cmd.Process.Kill()
-	b.cmd = nil
-	b.outFile.Close()
+	b.cancel()
 
 	b.started = false
 	return true
@@ -76,49 +59,4 @@ func (b *Bridge) Stop() bool {
 func (b *Bridge) Restart() {
 	b.Stop()
 	b.Start()
-}
-
-func (b *Bridge) ProvideSocket(socket *net.TCPConn) {
-	b.socket = socket
-	reader := bufio.NewReader(socket)
-
-	for {
-		bytes, err := reader.ReadBytes('\n')
-		if err != nil {
-			fmt.Println("connection broken, restarting main.py")
-			b.Restart()
-			return
-		}
-
-		var event Event
-		if err := json.Unmarshal(bytes, &event); err != nil {
-			fmt.Printf("briodge json err %#v\n", err)
-			continue
-		}
-
-		b.Chan <- event
-	}
-}
-
-func (b *Bridge) Write(cmd Command) error {
-	if b.socket == nil {
-		return fmt.Errorf("socket nil")
-	}
-
-	bytes, err := json.Marshal(cmd)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("writing '%s'\n", string(bytes))
-	bytes = append(bytes, '\n')
-
-	n, err := b.socket.Write(bytes)
-	if err != nil {
-		return err
-	} else if n != len(bytes) {
-		return fmt.Errorf("bytes length mismatch")
-	}
-
-	return nil
 }
