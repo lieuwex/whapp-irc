@@ -311,24 +311,30 @@ func (wi *WhappInstance) ListenForMessages(ctx context.Context, messagesCh chan 
 		return err
 	}
 
-	for {
-		if ctx.Err() != nil {
-			return nil
+	go func() error {
+		for {
+			if ctx.Err() != nil {
+				close(messagesCh)
+				return nil
+			}
+
+			var res []Message
+
+			err := wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
+			if err != nil {
+				close(messagesCh)
+				return err
+			}
+
+			for _, msg := range res {
+				messagesCh <- msg
+			}
+
+			time.Sleep(interval)
 		}
+	}()
 
-		var res []Message
-
-		err := wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
-		if err != nil {
-			return err
-		}
-
-		for _, msg := range res {
-			messagesCh <- msg
-		}
-
-		time.Sleep(interval)
-	}
+	return nil
 }
 
 func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {

@@ -24,8 +24,9 @@ type Connection struct {
 	me        whapp.Me
 	welcommed bool
 
-	bridge *Bridge
-	socket *net.TCPConn
+	bridge    *Bridge
+	socket    *net.TCPConn
+	messageCh chan whapp.Message
 
 	waitch chan bool
 }
@@ -33,78 +34,22 @@ type Connection struct {
 func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
-		waitch: make(chan bool),
+
+		waitch:    make(chan bool),
+		messageCh: make(chan whapp.Message),
 	}, nil
 }
 
 func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	conn.socket = socket
 	write := conn.writeIRC
-	messageCh := make(chan whapp.Message)
+	status := conn.status
 
-	status := func(msg string) error {
-		return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
-	}
+	ircCh := make(chan *irc.Message)
 
-	welcome := func() {
-		if conn.welcommed || conn.nickname == "" {
-			return
-		}
-
-		conn.writeIRC(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
-		conn.writeIRC(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
-
-		conn.welcommed = true
-
-		conn.bridge.Start()
-
-		conn.bridge.WI.Open(conn.bridge.ctx)
-
-		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
-		if err != nil {
-			fmt.Println("qr code not loaded correctly or smth, restarting bridge.")
-			conn.bridge.Restart()
-		}
-
-		bytes, err := qrcode.Encode(code, qrcode.High, 512)
-		if err != nil {
-			panic(err) // REVIEW
-		}
-
-		f, err := fs.AddBlob("", "qr-"+strTimestamp(), bytes)
-		if err != nil {
-			panic(err) // REVIEW
-		}
-
-		status("Scan this QR code: " + f.URL)
-
-		if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
-			panic(err)
-		}
-
-		status("logged in")
-
-		conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
-		if err != nil {
-			panic(err) // REVIEW
-		}
-
-		chats, err := conn.bridge.WI.GetAllChats(conn.bridge.ctx)
-		if err != nil {
-			panic(err)
-		}
-		for _, chat := range chats {
-			conn.addChat(chat)
-		}
-
-		go func() {
-			err := conn.bridge.WI.ListenForMessages(conn.bridge.ctx, messageCh, 500*time.Millisecond)
-			if err != nil {
-				panic(err) // REVIEW
-			}
-		}()
-	}
-
+	// listen for and parse messages.
+	// we want to do this outside the next irc message handle loop, so we can
+	// reply to PINGs but not handle stuff like JOINs yet.
 	go func() {
 		decoder := irc.NewDecoder(bufio.NewReader(socket))
 		for {
@@ -116,6 +61,37 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 			fmt.Printf("%s\t%#v\n", conn.nickname, msg)
 
+			if msg.Command == "PING" {
+				write(":whapp-irc PONG whapp-irc :" + msg.Params[0])
+				continue
+			}
+
+			ircCh <- msg
+		}
+	}()
+
+	welcome := func() {
+		if conn.welcommed || conn.nickname == "" {
+			return
+		}
+
+		conn.writeIRC(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
+		conn.writeIRC(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
+
+		conn.welcommed = true
+
+		conn.setup()
+	}
+
+	go func() {
+		for {
+			var msg *irc.Message
+			select {
+			case <-conn.waitch:
+				return
+			case msg = <-ircCh:
+			}
+
 			switch msg.Command {
 			case "NICK":
 				conn.nickname = msg.Params[0]
@@ -123,8 +99,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case "CAP":
 				write(":whapp-irc CAP * " + msg.Params[0])
-			case "PING":
-				write(":whapp-irc PONG whapp-irc :" + msg.Params[0])
 
 			case "PRIVMSG":
 				to := msg.Params[0]
@@ -142,7 +116,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				}
 
 				cid := chat.ID
-				err = conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, msg)
+				err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, msg)
 				if err != nil {
 					fmt.Printf("err while sending %s\n", err.Error())
 				}
@@ -187,7 +161,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		var err error
 
 		for {
-			msg := <-messageCh
+			msg := <-conn.messageCh
 			chat := conn.GetChatByID(msg.Chat.ID)
 			if chat == nil {
 				chat, err = conn.addChat(&msg.Chat)
@@ -309,6 +283,10 @@ func (conn *Connection) writeIRC(msg string) error {
 	return nil
 }
 
+func (conn *Connection) status(msg string) error {
+	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
+}
+
 func (conn *Connection) GetChatByID(ID string) *Chat {
 	for _, c := range conn.Chats {
 		if c.ID == ID {
@@ -376,4 +354,60 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 
 done:
 	return res, nil
+}
+
+// TODO: check if already setup
+func (conn *Connection) setup() error {
+	conn.bridge.Start()
+
+	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
+	if err != nil {
+		return err
+	}
+
+	if state == whapp.Loggedout {
+		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
+		if err != nil {
+			fmt.Println("qr code not loaded correctly or smth, restarting bridge.")
+			conn.bridge.Restart()
+		}
+
+		bytes, err := qrcode.Encode(code, qrcode.High, 512)
+		if err != nil {
+			return err
+		}
+
+		f, err := fs.AddBlob("", "qr-"+strTimestamp(), bytes)
+		if err != nil {
+			return err
+		}
+
+		conn.status("Scan this QR code: " + f.URL)
+	}
+
+	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
+		panic(err)
+	}
+
+	conn.status("logged in")
+
+	conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
+	if err != nil {
+		return err
+	}
+
+	chats, err := conn.bridge.WI.GetAllChats(conn.bridge.ctx)
+	if err != nil {
+		return err
+	}
+	for _, chat := range chats {
+		conn.addChat(chat)
+	}
+
+	err = conn.bridge.WI.ListenForMessages(conn.bridge.ctx, conn.messageCh, 500*time.Millisecond)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
