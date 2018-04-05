@@ -57,7 +57,7 @@ func listenInternalSockets() {
 
 func main() {
 	var err error
-	fs, err = MakeFileServer("", "3000", "files")
+	fs, err = MakeFileServer("local.lieuwe.xyz", "3000", "files")
 	if err != nil {
 		panic(err)
 	}

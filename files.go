@@ -47,7 +47,7 @@ func (fs *FileServer) MakeFile(messageID, filename string) *File {
 		return nil
 	}
 
-	url := fmt.Sprintf("http://localhost:%s/%s", fs.Port, filename)
+	url := fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, filename)
 	file := fmt.Sprintf("./%s/%s", fs.Directory, filename)
 
 	return &File{
