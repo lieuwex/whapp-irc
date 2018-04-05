@@ -5,8 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+)
+
+const (
+	defaultHost           = "localhost"
+	defaultFileServerPort = "3000"
+	defaultIRCPort        = "6060"
 )
 
 var fs *FileServer
@@ -56,8 +63,23 @@ func listenInternalSockets() {
 }
 
 func main() {
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = defaultHost
+	}
+
+	fileServerPort := os.Getenv("FILE_SERVER_PORT")
+	if fileServerPort == "" {
+		fileServerPort = defaultFileServerPort
+	}
+
+	ircPort := os.Getenv("IRC_SERVER_PORT")
+	if ircPort == "" {
+		ircPort = defaultIRCPort
+	}
+
 	var err error
-	fs, err = MakeFileServer("local.lieuwe.xyz", "3000", "files")
+	fs, err = MakeFileServer(host, fileServerPort, "files")
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +87,7 @@ func main() {
 
 	go listenInternalSockets()
 
-	addr, err := net.ResolveTCPAddr("tcp", ":6060")
+	addr, err := net.ResolveTCPAddr("tcp", host+":"+ircPort)
 	if err != nil {
 		panic(err)
 	}

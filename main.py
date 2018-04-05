@@ -195,12 +195,14 @@ async def setup():
     print(driver)
 
     await driver.connect()
-    qr = await get_qr_plain()
-    ev("qr", {"code": qr})
+    # qr = await get_qr_plain()
+    # ev("qr", {"code": qr})
+    # driver.save_firefox_profile(remove_old=True)
     await driver.wait_for_login()
     ev("ok", {"id": "login"})
     async for c in driver.get_all_chats():
         ev("chat", format_chat(c))
+    ev("ok", {"id": "chats"})
 
     await asyncio.wait([
         loopReceive(reader, writer),
