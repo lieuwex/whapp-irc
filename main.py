@@ -1,18 +1,21 @@
 import time
 import sys
-from webwhatsapi.async_driver import WhatsAPIDriverAsync
-from webwhatsapi.objects.message import Message, MediaMessage, MessageGroup, NotificationMessage
-from webwhatsapi.objects.chat import UserChat, GroupChat
 import logging
 import json
 import base64
 import asyncio
+import os
+
+sys.path.append(os.getcwd() + "/webwhatsapi")
+from webwhatsapi.async_driver import WhatsAPIDriverAsync
+from webwhatsapi.objects.message import Message, MediaMessage, MessageGroup, NotificationMessage
+from webwhatsapi.objects.chat import UserChat, GroupChat
 
 logger = logging.getLogger('whapp-irc')
 logger.setLevel(logging.DEBUG)
 
 evloop = asyncio.get_event_loop()
-driver = WhatsAPIDriverAsync(username="whapp-user", logger=logger, loop=evloop)
+driver = WhatsAPIDriverAsync(headless=False, logger=logger, loop=evloop, profile="./profile")
 print(dir(driver))
 
 reader = None
@@ -27,8 +30,6 @@ def ev(event, *arg):
         "args": arg,
     }) + "\n"
     writer.write(str.encode())
-    sys.stdout.write(str)
-    sys.stdout.flush()
 
 
 def format_contact(contact):

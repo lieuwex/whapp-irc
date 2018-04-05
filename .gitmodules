@@ -1,0 +1,3 @@
+[submodule "webwhatsapi"]
+	path = webwhatsapi
+	url = git@github.com:lieuwex/webwhatsapi.git
