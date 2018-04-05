@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
+
+var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
 type Connection struct {
 	Chats []*Chat
@@ -102,10 +106,21 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 
+				replyID := ""
+				groups := replyRegex.FindStringSubmatch(msg)
+				if groups != nil {
+					n, err := strconv.Atoi(groups[1])
+					if err == nil && n >= 1 && n <= len(chat.MessageIDs) {
+						replyID = chat.MessageIDs[len(chat.MessageIDs)-n]
+					}
+
+					msg = groups[2]
+				}
+
 				cid := chat.ID
 				err := conn.bridge.Write(Command{
 					Command: "send",
-					Args:    []string{cid, msg},
+					Args:    []string{cid, msg, replyID},
 				})
 				if err != nil {
 					fmt.Printf("err while sending %s\n", err.Error())
