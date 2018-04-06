@@ -313,8 +313,10 @@ func (conn *Connection) GetChatByID(ID string) *Chat {
 }
 
 func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
+	identifier = strings.ToLower(identifier)
+
 	for _, c := range conn.Chats {
-		if c.Identifier() == identifier {
+		if strings.ToLower(c.Identifier()) == identifier {
 			return c
 		}
 	}
