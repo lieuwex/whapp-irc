@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/base64"
 	"fmt"
 	"log"
 	"net"
@@ -216,13 +215,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			if msg.IsMedia {
-				if msg.Body == "" {
-					continue
-				}
-
-				bytes, err := base64.StdEncoding.DecodeString(msg.Body)
+				bytes, err := msg.DownloadMedia()
 				if err != nil {
-					fmt.Printf("err base64 %s\n", err.Error())
+					fmt.Printf("err download %s\n", err.Error())
 					continue
 				}
 				_, err = fs.AddBlob(msg.ID.Serialized, getFileName(bytes), bytes)
@@ -231,7 +226,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 			}
-			message := msg.Content()
+			message := getMessageBody(msg)
 
 			date := msg.Time().UTC().Format("2006-01-02T15:04:05.000Z")
 
@@ -434,6 +429,21 @@ func (conn *Connection) setup() error {
 		conn.messageCh,
 		500*time.Millisecond,
 	)
+}
+
+func getMessageBody(msg whapp.Message) string {
+	res := msg.Body
+
+	if msg.IsMedia {
+		res = "-- file --"
+		if f := fs.IDToPath[msg.ID.Serialized]; f != nil {
+			res = f.URL
+		}
+
+		if msg.Caption != "" {
+			res += " " + msg.Caption
+		}
 	}
 
+	return res
 }
