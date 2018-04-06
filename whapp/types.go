@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -145,14 +146,6 @@ type Message struct {
 func (msg *Message) DownloadMedia() ([]byte, error) {
 	var res []byte
 
-	if msg.Body != "" {
-		_, err := base64.StdEncoding.Decode(res, []byte(msg.Body))
-		if err != nil {
-			return res, err
-		}
-		return res, nil
-	}
-
 	clientURL := msg.MediaClientURL
 	mediaKey := msg.MediaKey
 	cryptKey := CryptKeys[msg.MediaType]
@@ -163,12 +156,7 @@ func (msg *Message) DownloadMedia() ([]byte, error) {
 		return res, err
 	}
 
-	_, err = base64.StdEncoding.Decode(res, bytes)
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
+	return base64.StdEncoding.DecodeString(string(bytes))
 }
 
 func (msg *Message) Content() string {
@@ -190,8 +178,19 @@ func (msg *Message) Time() time.Time {
 }
 
 type Presence struct {
-	ID         string        `json:"id"`
-	Chatstates []interface{} `json:"chatstates"`
+	ID        string `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	Type      string `json:"type"`
+
+	ChatActive bool `json:"chatActive"`
+	HasData    bool `json:"hasData"`
+	IsGroup    bool `json:"isGroup"`
+	IsOnline   bool `json:"isOnline"`
+	IsUser     bool `json:"isUser"`
+}
+
+func (p *Presence) Time() time.Time {
+	return time.Unix(p.Timestamp, 0)
 }
 
 type Chat struct {
@@ -238,6 +237,28 @@ func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participa
 	}
 
 	fmt.Printf("%#v\n", res)
+
+	return res, nil
+}
+
+func (c *Chat) GetPresence(ctx context.Context, wi *WhappInstance) (Presence, error) {
+	var res Presence
+
+	if wi.LoginState != Loggedin {
+		return res, fmt.Errorf("not logged in")
+	}
+
+	err := wi.inject(ctx)
+	if err != nil {
+		return res, err
+	}
+
+	str := fmt.Sprintf("whappGo.getPresence(%s)", strconv.Quote(c.ID))
+
+	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
+	if err != nil {
+		return res, err
+	}
 
 	return res, nil
 }

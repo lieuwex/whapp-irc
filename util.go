@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
@@ -41,4 +43,14 @@ var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
 func IRCsafeString(str string) string {
 	str = unidecode.Unidecode(str)
 	return unsafeRegex.ReplaceAllLiteralString(str, "")
+}
+
+func onInterrupt(fn func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		fn()
+		os.Exit(1)
+	}()
 }

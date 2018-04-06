@@ -20,14 +20,20 @@ const (
 type WhappInstance struct {
 	CDP        *chromedp.CDP
 	LoginState LoginState
-	Messages   <-chan Message
 
 	injected bool
-	id       string
 }
 
 func MakeWhappInstance(ctx context.Context) (*WhappInstance, error) {
-	cdp, err := chromedp.New(ctx, chromedp.WithRunnerOptions(runner.ExecPath("/Applications/Chromium.app/Contents/MacOS/Chromium"), runner.Port(9222)))
+	options := chromedp.WithRunnerOptions(
+		runner.Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
+		runner.Port(9222),
+		// runner.Flag("headless", true),
+		runner.Flag("disable-gpu", true),
+		runner.Flag("no-sandbox", true),
+	)
+
+	cdp, err := chromedp.New(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +43,6 @@ func MakeWhappInstance(ctx context.Context) (*WhappInstance, error) {
 		LoginState: Loggedout,
 
 		injected: false,
-		id:       "TODO",
 	}, nil
 }
 
@@ -188,16 +193,26 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 			isGroup: chat.isGroup,
 			contact: whappGo.contactToJSON(chat.contact),
 			groupMetadata: chat.groupMetadata && chat.groupMetadata.toJSON(),
-			presence: chat.presence && chat.presence.toJSON(),
+			presence: chat.presence && whappGo.presenceToJSON(chat.presence),
 			msgs: null,
 		});
 	};
 
-	whappGo.buildEvent = function (event, args) {
-		return JSON.stringify({
-			event: event,
-			args: args,
-		});
+	whappGo.presenceToJSON = function (presence) {
+		if (presence == null) {
+			return presence;
+		}
+
+		return {
+			timestamp: presence.t,
+			type: presence.type,
+			id: presence.id,
+			chatActive: presence.chatActive,
+			hasData: presence.hasData,
+			isGroup: presence.isGroup,
+			isOnline: presence.isOnline,
+			isUser: presence.isUser,
+		};
 	}
 
 	whappGo.getNewMessages = function () {
@@ -213,7 +228,12 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 				}
 
 				msg.__x_isNewMsg = false;
+
+				if (msg.isMedia && !msg.clientUrl) {
+					continue;
+				}
 				msg = whappGo.msgToJSON(msg);
+
 				console.log(msg);
 				res.push(msg);
 			}
@@ -239,7 +259,10 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 		};
 		*/
 
-		const chat = Store.Chat.models.find(c => c.__x_id === id);
+		const chat = Store.Chat.models.find(c => c.id === id);
+		if (chat == null) {
+			throw new Error('no chat with id ' + id + ' found.');
+		}
 
 		function sleep (ms) {
 			return new Promise(resolve => setTimeout(resolve, ms));
@@ -273,21 +296,36 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 
 	whappGo.getGroupParticipants = async function (id) {
 		const res = Store.GroupMetadata.models.find(md => md.id === id);
-		console.log(id, res);
 
+		// TODO: user should be able to just get the stale one and call
+		// .Update() in the go code.
 		if (res != null && res.stale) {
-			console.log('updating');
 			await res.update();
 		}
 
-		const x= res.participants.map(p => whappGo.participantToJSON(p));
-		console.log(x);
-		return x;
+		return res.participants.map(p => whappGo.participantToJSON(p));
 	};
 
 	whappGo.getAllChats = function () {
 		return Store.Chat.models.map(c => whappGo.chatToJSON(c));
 	};
+
+	whappGo.getPresence = async function (chatId) {
+		const res = Store.Presence.models.find(p => p.id === id);
+
+		// TODO: user should be able to just get the stale one and call
+		// .Update() in the go code.
+		if (res != null && res.stale) {
+			try {
+				await res.update();
+			} catch (e) {
+				console.error(e);
+				return null;
+			}
+		}
+
+		return whappGo.presenceToJSON(res);
+	}
 	`
 
 	var idc []byte

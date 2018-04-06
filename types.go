@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"whapp-irc/whapp"
 )
 
 const MessageIDListSize = 750
