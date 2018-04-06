@@ -22,11 +22,13 @@ func MakeBridge() *Bridge {
 	}
 
 	onInterrupt(func() {
-		if b.cancel == nil {
-			return
+		if b.WI != nil {
+			b.WI.Shutdown(b.ctx)
 		}
 
-		b.cancel()
+		if b.cancel != nil {
+			b.cancel()
+		}
 	})
 
 	return b
