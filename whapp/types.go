@@ -230,9 +230,9 @@ func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participa
 		return res, err
 	}
 
-	str := fmt.Sprintf("whappGo.getGroupParticipants('%s')", c.ID)
+	str := fmt.Sprintf("whappGo.getGroupParticipants(%s)", strconv.Quote(c.ID))
 
-	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &res, AwaitPromise))
+	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
 		return res, err
 	}

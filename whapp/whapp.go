@@ -3,6 +3,7 @@ package whapp
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -350,15 +351,10 @@ func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string,
 		return err
 	}
 
-	str := fmt.Sprintf("whappGo.sendMessage('%s', '%s')", chatID, message)
+	str := fmt.Sprintf("whappGo.sendMessage(%s, %s)", strconv.Quote(chatID), strconv.Quote(message))
 
 	var idc []byte
-	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &idc))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return wi.CDP.Run(ctx, chromedp.Evaluate(str, &idc))
 }
 
 func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
