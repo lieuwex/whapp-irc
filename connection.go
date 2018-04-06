@@ -357,6 +357,8 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 
 		Joined:     false,
 		MessageIDs: make([]string, 0),
+
+		rawChat: chat,
 	}
 
 	fmt.Printf("%s\t\t\t\t%d participants\n", res.Identifier(), len(res.Participants))

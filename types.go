@@ -44,6 +44,8 @@ type Chat struct {
 
 	Joined     bool
 	MessageIDs []string
+
+	rawChat *whapp.Chat
 }
 
 func (c *Chat) SafeName() string {
