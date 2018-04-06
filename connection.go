@@ -24,6 +24,7 @@ type Connection struct {
 	nickname  string
 	me        whapp.Me
 	welcommed bool
+	caps      []string
 
 	bridge    *Bridge
 	socket    *net.TCPConn
@@ -109,7 +110,16 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				welcome()
 
 			case "CAP":
-				write(":whapp-irc CAP * " + msg.Params[0])
+				switch msg.Params[0] {
+				case "LS":
+					write(":whapp-irc CAP * LS :server-time")
+
+				case "REQ":
+					caps := strings.Split(msg.Trailing(), " ")
+					for _, cap := range caps {
+						conn.caps = append(conn.caps, strings.TrimSpace(cap))
+					}
+				}
 
 			case "PRIVMSG":
 				to := msg.Params[0]
