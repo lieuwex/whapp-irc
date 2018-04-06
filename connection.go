@@ -413,6 +413,12 @@ func (conn *Connection) setup() error {
 	}
 	conn.status("logged in")
 
+	if qrFile != nil {
+		if err = fs.RemoveFile(qrFile); err != nil {
+			fmt.Printf("error while removing QR code: %s\n", err.Error())
+		}
+	}
+
 	conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
 	if err != nil {
 		return err

@@ -77,3 +77,8 @@ func (fs *FileServer) AddBlob(messageID string, filename string, bytes []byte) (
 func (fs *FileServer) Stop() {
 	// TODO
 }
+
+func (fs *FileServer) RemoveFile(file *File) error {
+	delete(fs.IDToPath, file.MessageID)
+	return os.Remove(file.Path)
+}
