@@ -416,5 +416,10 @@ func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
 }
 
 func (wi *WhappInstance) Shutdown(ctx context.Context) error {
-	return wi.CDP.Shutdown(ctx)
+	err := wi.CDP.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+
+	return wi.CDP.Wait()
 }
