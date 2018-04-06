@@ -11,6 +11,7 @@ import (
 	"time"
 	"whapp-irc/whapp"
 
+	"github.com/avast/retry-go"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
@@ -80,7 +81,17 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 		conn.welcommed = true
 
-		conn.setup()
+		err := retry.Do(func() error {
+			conn.bridge.Stop()
+			err := conn.setup()
+			if err != nil {
+				fmt.Printf("err while setting up: %s\n", err.Error())
+			}
+			return err
+		}, retry.Attempts(5), retry.Delay(time.Second))
+		if err != nil {
+			panic(err) // REVIEW
+		}
 	}
 
 	go func() {
@@ -358,18 +369,21 @@ done:
 
 // TODO: check if already setup
 func (conn *Connection) setup() error {
-	conn.bridge.Start()
+	_, err := conn.bridge.Start()
+	if err != nil {
+		return err
+	}
 
 	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
 	if err != nil {
 		return err
 	}
 
+	var qrFile *File
 	if state == whapp.Loggedout {
 		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
 		if err != nil {
-			fmt.Println("qr code not loaded correctly or smth, restarting bridge.")
-			conn.bridge.Restart()
+			return fmt.Errorf("qr code not loaded correctly or smth")
 		}
 
 		bytes, err := qrcode.Encode(code, qrcode.High, 512)
@@ -377,18 +391,17 @@ func (conn *Connection) setup() error {
 			return err
 		}
 
-		f, err := fs.AddBlob("", "qr-"+strTimestamp(), bytes)
+		qrFile, err = fs.AddBlob("", "qr-"+strTimestamp(), bytes)
 		if err != nil {
 			return err
 		}
 
-		conn.status("Scan this QR code: " + f.URL)
+		conn.status("Scan this QR code: " + qrFile.URL)
 	}
 
 	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
-		panic(err)
+		return err
 	}
-
 	conn.status("logged in")
 
 	conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
@@ -401,13 +414,16 @@ func (conn *Connection) setup() error {
 		return err
 	}
 	for _, chat := range chats {
-		conn.addChat(chat)
+		if _, err := conn.addChat(chat); err != nil {
+			return err
+		}
 	}
 
-	err = conn.bridge.WI.ListenForMessages(conn.bridge.ctx, conn.messageCh, 500*time.Millisecond)
-	if err != nil {
-		return err
+	return conn.bridge.WI.ListenForMessages(
+		conn.bridge.ctx,
+		conn.messageCh,
+		500*time.Millisecond,
+	)
 	}
 
-	return nil
 }

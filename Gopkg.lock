@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/avast/retry-go"
+  packages = ["."]
+  revision = "5469272a8171235352a56af37e5f7facf814423f"
+  version = "1.0.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/chromedp/cdproto"
   packages = [
@@ -161,6 +167,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8e6c27b51ad82289131450adb63a8fe0abbba0d02315a43a7cea9d5e081096d9"
+  inputs-digest = "b4453166080184fee53d441a13dafa85a4cc2d976a32a991d54ececdc86ca554"
   solver-name = "gps-cdcl"
   solver-version = 1

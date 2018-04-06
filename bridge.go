@@ -17,32 +17,37 @@ type Bridge struct {
 }
 
 func MakeBridge() *Bridge {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	res := &Bridge{
+	b := &Bridge{
 		started: false,
-		ctx:     ctx,
-		cancel:  cancel,
 	}
 
-	return res
+	onInterrupt(func() {
+		if b.cancel == nil {
+			return
+		}
+
+		b.cancel()
+	})
+
+	return b
 }
 
-func (b *Bridge) Start() bool {
+func (b *Bridge) Start() (bool, error) {
 	if b.started {
-		return false
+		return false, nil
 	}
+
+	b.ctx, b.cancel = context.WithCancel(context.Background())
 
 	wi, err := whapp.MakeWhappInstance(b.ctx)
-
-	b.started = true
 	if err != nil {
-		println("error while making instance")
-		b.Restart()
+		return false, err
 	}
 
+	b.started = true
 	b.WI = wi
-	return true
+
+	return true, nil
 }
 
 func (b *Bridge) Stop() bool {
