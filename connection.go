@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -20,14 +19,18 @@ var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 type Connection struct {
 	Chats []*Chat
 
-	nickname  string
-	me        whapp.Me
-	welcommed bool
-	caps      []string
+	nickname string
+	me       whapp.Me
+	caps     []string
 
-	bridge    *Bridge
-	socket    *net.TCPConn
-	messageCh chan whapp.Message
+	bridge *Bridge
+	socket *net.TCPConn
+
+	messageCh <-chan whapp.Message
+	errCh     <-chan error
+
+	welcomed  bool
+	welcomeCh chan bool
 
 	waitch chan bool
 }
@@ -36,8 +39,9 @@ func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
 
-		waitch:    make(chan bool),
-		messageCh: make(chan whapp.Message),
+		welcomeCh: make(chan bool),
+
+		waitch: make(chan bool),
 	}, nil
 }
 
@@ -56,7 +60,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		for {
 			msg, err := decoder.Decode()
 			if err != nil {
-				log.Printf("%#v", err)
+				fmt.Printf("error while listening for IRC messages: %s\n", err.Error())
 				close(conn.waitch)
 				return
 			}
@@ -72,14 +76,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}()
 
 	welcome := func() {
-		if conn.welcommed || conn.nickname == "" {
+		if conn.welcomed || conn.nickname == "" {
 			return
 		}
 
 		conn.writeIRC(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
 		conn.writeIRC(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
 
-		conn.welcommed = true
+		conn.welcomed = true
 
 		err := retry.Do(func() error {
 			conn.bridge.Stop()
@@ -92,6 +96,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		if err != nil {
 			panic(err) // REVIEW
 		}
+
+		close(conn.welcomeCh)
 	}
 
 	go func() {
@@ -177,11 +183,25 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
+	<-conn.welcomeCh
+
 	go func() {
 		var err error
 
 		for {
-			msg := <-conn.messageCh
+			var msg whapp.Message
+			select {
+			case <-conn.waitch:
+				return
+
+			case err := <-conn.errCh:
+				fmt.Printf("error while listening for whatsapp messages: %s\n", err.Error())
+				close(conn.waitch)
+				return
+
+			case msg = <-conn.messageCh:
+			}
+
 			chat := conn.GetChatByID(msg.Chat.ID)
 			if chat == nil {
 				chat, err = conn.addChat(&msg.Chat)

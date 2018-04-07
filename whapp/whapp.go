@@ -3,6 +3,7 @@ package whapp
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -338,42 +339,65 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 	return nil
 }
 
-func (wi *WhappInstance) ListenForMessages(ctx context.Context, messagesCh chan Message, interval time.Duration) error {
+func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Duration) (<-chan Message, <-chan error) {
 	// REVIEW: is this still correct when we get logged out?
 
+	errCh := make(chan error)
+	messageCh := make(chan Message)
+	var err error
+
 	if wi.LoginState != Loggedin {
-		return fmt.Errorf("not logged in")
+		errCh <- fmt.Errorf("not logged in")
+		goto err
 	}
 
-	err := wi.inject(ctx)
+	err = wi.inject(ctx)
 	if err != nil {
-		return err
+		errCh <- err
+		goto err
 	}
 
-	go func() error {
+	go func() {
+		defer close(errCh)
+		defer close(messageCh)
+
 		for {
-			if ctx.Err() != nil {
-				close(messagesCh)
-				return nil
+			if err := ctx.Err(); err != nil {
+				errCh <- err
+				return
 			}
 
 			var res []Message
 
 			err := wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
 			if err != nil {
-				close(messagesCh)
-				return err
+				errCh <- err
+				return
 			}
 
+			sort.SliceStable(res, func(i, j int) bool {
+				return res[i].Timestamp < res[j].Timestamp
+			})
+
 			for _, msg := range res {
-				messagesCh <- msg
+				if msg.IsNotification {
+					// TODO
+					continue
+				}
+
+				messageCh <- msg
 			}
 
 			time.Sleep(interval)
 		}
 	}()
 
-	return nil
+	return messageCh, errCh
+
+err:
+	close(errCh)
+	close(messageCh)
+	return messageCh, errCh
 }
 
 func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {
