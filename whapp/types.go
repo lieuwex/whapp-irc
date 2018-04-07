@@ -2,7 +2,6 @@ package whapp
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -158,19 +157,13 @@ type Message struct {
 }
 
 func (msg *Message) DownloadMedia() ([]byte, error) {
-	var res []byte
-
-	clientURL := msg.MediaClientURL
-	mediaKey := msg.MediaKey
-	cryptKey := CryptKeys[msg.MediaType]
-
-	cmd := exec.Command("python3", "./download.py", clientURL, mediaKey, cryptKey)
-	bytes, err := cmd.Output()
-	if err != nil {
-		return res, err
-	}
-
-	return base64.StdEncoding.DecodeString(string(bytes))
+	return exec.Command(
+		"python3",
+		"./download.py",
+		msg.MediaClientURL,
+		msg.MediaKey,
+		CryptKeys[msg.MediaType],
+	).Output()
 }
 
 func (msg *Message) FormatBody(contacts []Contact) string {
