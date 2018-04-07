@@ -168,7 +168,7 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 		res.content = msg.body;
 		res.caption = msg.caption;
 		res.isGroupMsg = msg.isGroupMsg;
-		res.isLink = msg.isLink;
+		res.isLink = !!msg.isLink; // REVIEW
 		res.isMMS = msg.isMMS;
 		res.isMedia = msg.isMedia;
 		res.isNotification = msg.isNotification;
