@@ -25,9 +25,9 @@ type WhappInstance struct {
 	injected bool
 }
 
-func MakeWhappInstance(ctx context.Context) (*WhappInstance, error) {
+func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, error) {
 	options := chromedp.WithRunnerOptions(
-		runner.Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
+		runner.Path(chromePath),
 		runner.Port(9222),
 		// runner.Flag("headless", true),
 		runner.Flag("disable-gpu", true),

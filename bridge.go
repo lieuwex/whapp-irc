@@ -41,7 +41,7 @@ func (b *Bridge) Start() (bool, error) {
 
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 
-	wi, err := whapp.MakeWhappInstance(b.ctx)
+	wi, err := whapp.MakeWhappInstance(b.ctx, chromePath)
 	if err != nil {
 		return false, err
 	}
