@@ -45,6 +45,7 @@ func main() {
 		panic(err)
 	}
 	go fs.Start()
+	defer fs.Stop()
 
 	addr, err := net.ResolveTCPAddr("tcp", ":6060")
 	if err != nil {

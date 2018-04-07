@@ -19,6 +19,8 @@ type FileServer struct {
 	Directory string
 
 	IDToPath map[string]*File
+
+	httpServer *http.Server
 }
 
 func MakeFileServer(host, port, dir string) (*FileServer, error) {
@@ -36,10 +38,23 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 	}, nil
 }
 
-func (fs *FileServer) Start() {
-	http.Handle("/", http.FileServer(http.Dir(fs.Directory)))
+func (fs *FileServer) Start() error {
+	fs.httpServer = &http.Server{
+		Addr:    ":" + fs.Port,
+		Handler: http.FileServer(http.Dir(fs.Directory)),
+	}
 
-	http.ListenAndServe(fs.Host+":"+fs.Port, nil)
+	return fs.httpServer.ListenAndServe()
+}
+
+func (fs *FileServer) Stop() error {
+	err := fs.httpServer.Close()
+	if err != nil {
+		return err
+	}
+
+	fs.httpServer = nil
+	return nil
 }
 
 func (fs *FileServer) MakeFile(messageID, filename string) *File {
@@ -72,10 +87,6 @@ func (fs *FileServer) AddBlob(messageID string, filename string, bytes []byte) (
 		fs.IDToPath[messageID] = f
 	}
 	return f, nil
-}
-
-func (fs *FileServer) Stop() {
-	// TODO
 }
 
 func (fs *FileServer) RemoveFile(file *File) error {
