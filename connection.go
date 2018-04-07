@@ -248,17 +248,15 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 			message := getMessageBody(msg)
 
-			date := msg.Time().UTC().Format("2006-01-02T15:04:05.000Z")
-
 			if msg.QuotedMessageObject != nil {
 				line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 2)[0]
-				str := fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", date, senderSafeName, to, line)
+				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
 
 			for _, line := range strings.Split(message, "\n") {
-				fmt.Printf("\t%s: %s\n", sender.FullName(), line)
-				str := fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", date, senderSafeName, to, line)
+				fmt.Printf("\t%s->%s: %s\n", senderSafeName, to, line)
+				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
 		}
@@ -476,4 +474,9 @@ func getMessageBody(msg whapp.Message) string {
 	}
 
 	return res
+}
+
+func formatPrivateMessage(date time.Time, from, to, line string) string {
+	dateFormat := date.UTC().Format("2006-01-02T15:04:05.000Z")
+	return fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", dateFormat, from, to, line)
 }
