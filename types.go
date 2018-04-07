@@ -10,27 +10,19 @@ const MessageIDListSize = 750
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 var nonNumberRegex = regexp.MustCompile(`[^\d]`)
 
-type ContactNames struct {
-	Short     string `json:"short"`
-	Push      string `json:"push"`
-	Formatted string `json:"formatted"`
-}
-
 type Contact struct {
-	ID      string       `json:"id"`
-	Names   ContactNames `json:"names"`
-	IsAdmin bool
-	IsMe    bool
+	WhappContact whapp.Contact
+	IsAdmin      bool
 }
 
 func (c *Contact) FullName() string {
-	return c.Names.Formatted
+	return c.WhappContact.FormattedName
 }
 
 func (c *Contact) SafeName() string {
 	str := c.FullName()
-	if numberRegex.MatchString(str) && IRCsafeString(c.Names.Push) != "" {
-		str = c.Names.Push
+	if numberRegex.MatchString(str) && IRCsafeString(c.WhappContact.PushName) != "" {
+		str = c.WhappContact.PushName
 	}
 
 	return IRCsafeString(str)

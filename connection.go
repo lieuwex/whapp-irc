@@ -246,10 +246,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 			}
-			message := getMessageBody(msg)
+			message := getMessageBody(&msg, chat.Participants)
 
 			if msg.QuotedMessageObject != nil {
-				line := "> " + strings.SplitN(msg.QuotedMessageObject.Content(), "\n", 2)[0]
+				line := "> " + strings.SplitN(getMessageBody(msg.QuotedMessageObject, chat.Participants), "\n", 2)[0]
 				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
@@ -282,7 +282,7 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 	names := make([]string, 0)
 	for _, contact := range chat.Participants {
-		if contact.IsMe {
+		if contact.WhappContact.IsMe {
 			if contact.IsAdmin {
 				conn.writeIRC(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.nickname))
 			}
@@ -343,15 +343,8 @@ func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 
 func formatContact(contact whapp.Contact, isAdmin bool) Contact {
 	return Contact{
-		ID:      contact.ID,
-		IsAdmin: isAdmin,
-		IsMe:    contact.IsMe,
-
-		Names: ContactNames{
-			Short:     contact.ShortName,
-			Push:      contact.PushName,
-			Formatted: contact.FormattedName,
-		},
+		WhappContact: contact,
+		IsAdmin:      isAdmin,
 	}
 }
 
@@ -452,15 +445,20 @@ func (conn *Connection) setup() error {
 		}
 	}
 
-	return conn.bridge.WI.ListenForMessages(
+	conn.messageCh, conn.errCh = conn.bridge.WI.ListenForMessages(
 		conn.bridge.ctx,
-		conn.messageCh,
 		500*time.Millisecond,
 	)
+	return nil
 }
 
-func getMessageBody(msg whapp.Message) string {
-	res := msg.Body
+func getMessageBody(msg *whapp.Message, contacts []Contact) string {
+	whappContacts := make([]whapp.Contact, len(contacts))
+	for i, c := range contacts {
+		whappContacts[i] = c.WhappContact
+	}
+
+	res := msg.FormatBody(whappContacts)
 
 	if msg.IsMedia {
 		res = "-- file --"

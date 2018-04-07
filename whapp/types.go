@@ -5,11 +5,16 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
 )
+
+var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
+var mentionRegex = regexp.MustCompile(`@\d+`)
 
 type PhoneInfo struct {
 	WhatsAppVersion    string `json:"wa_version"`
@@ -65,6 +70,15 @@ type Contact struct {
 	FormattedName string `json:"formattedName"`
 }
 
+// REVIEW: better name
+func (c *Contact) GetName() string {
+	str := c.FormattedName
+	if numberRegex.MatchString(str) && c.PushName != "" {
+		str = c.PushName
+	}
+	return str
+}
+
 type Participant struct {
 	ID      string  `json:"id"`
 	IsAdmin bool    `json:"isAdmin"`
@@ -109,8 +123,8 @@ type Message struct {
 	Invis      bool      `json:"invis"`
 	Starred    bool      `json:"star"`
 
-	Recipients []string `json:"recipients"`
-	Mentioned  []string `json:"mentionedJidList"`
+	Recipients   []string `json:"recipients"`
+	MentionedIDs []string `json:"mentionedJidList"`
 
 	IsGIF          bool `json:"isGif"`
 	IsLive         bool `json:"isLive"`
@@ -159,8 +173,22 @@ func (msg *Message) DownloadMedia() ([]byte, error) {
 	return base64.StdEncoding.DecodeString(string(bytes))
 }
 
-func (msg *Message) Content() string {
-	res := msg.Body
+func (msg *Message) FormatBody(contacts []Contact) string {
+	return mentionRegex.ReplaceAllStringFunc(msg.Body, func(s string) string {
+		number := s[1:]
+
+		for _, c := range contacts {
+			if strings.HasPrefix(c.ID, number) {
+				return "@" + c.GetName()
+			}
+		}
+
+		return s
+	})
+}
+
+func (msg *Message) Content(contacts []Contact) string {
+	res := msg.FormatBody(contacts)
 
 	if msg.IsMedia {
 		res = "-- file --"
