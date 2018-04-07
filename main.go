@@ -40,14 +40,14 @@ func main() {
 	}
 
 	var err error
-	fs, err = MakeFileServer("localhost", "3000", "files")
+	fs, err = MakeFileServer(host, fileServerPort, "files")
 	if err != nil {
 		panic(err)
 	}
 	go fs.Start()
 	defer fs.Stop()
 
-	addr, err := net.ResolveTCPAddr("tcp", ":6060")
+	addr, err := net.ResolveTCPAddr("tcp", ":"+ircPort)
 	if err != nil {
 		panic(err)
 	}
