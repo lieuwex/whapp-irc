@@ -64,7 +64,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				close(conn.waitch)
 				return
 			}
-			fmt.Printf("%s\t%#v\n", conn.nickname, msg)
 
 			if msg.Command == "PING" {
 				write(":whapp-irc PONG whapp-irc :" + msg.Params[0])
@@ -130,8 +129,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				to := msg.Params[0]
 				msg := msg.Params[1]
 
+				fmt.Printf("%s->%s: %s\n", conn.nickname, to, msg)
+
 				if to == "status" {
-					fmt.Printf("%s->status: %s\n", conn.nickname, msg)
 					continue
 				}
 
@@ -216,7 +216,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			chat.AddMessageID(msg.ID.Serialized)
-			fmt.Printf("\t%#v\n", msg)
 
 			sender := formatContact(msg.Sender, false)
 			senderSafeName := sender.SafeName()
@@ -256,7 +255,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			for _, line := range strings.Split(message, "\n") {
-				fmt.Printf("\t%s->%s: %s\n", senderSafeName, to, line)
+				fmt.Printf("%s->%s: %s\n", senderSafeName, to, line)
 				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
@@ -319,6 +318,7 @@ func (conn *Connection) writeIRC(msg string) error {
 }
 
 func (conn *Connection) status(msg string) error {
+	fmt.Printf("status->%s: %s\n", conn.nickname, msg)
 	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
 }
 

@@ -257,8 +257,6 @@ func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participa
 		return res, err
 	}
 
-	fmt.Printf("%#v\n", res)
-
 	return res, nil
 }
 
