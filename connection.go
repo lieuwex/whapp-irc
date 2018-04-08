@@ -234,7 +234,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			_, ok := fs.HashToPath[msg.MediaFileHash]
-			if msg.IsMedia && !ok {
+			if msg.IsMMS && !ok {
 				bytes, err := msg.DownloadMedia()
 				if err != nil {
 					fmt.Printf("err download %s\n", err.Error())
@@ -461,7 +461,7 @@ func getMessageBody(msg *whapp.Message, contacts []Contact) string {
 
 	res := msg.FormatBody(whappContacts)
 
-	if msg.IsMedia {
+	if msg.IsMMS {
 		res = "-- file --"
 		if f := fs.HashToPath[msg.MediaFileHash]; f != nil {
 			res = f.URL

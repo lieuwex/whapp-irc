@@ -183,7 +183,7 @@ func (msg *Message) FormatBody(contacts []Contact) string {
 func (msg *Message) Content(contacts []Contact) string {
 	res := msg.FormatBody(contacts)
 
-	if msg.IsMedia {
+	if msg.IsMMS {
 		res = "-- file --"
 
 		if msg.Caption != "" {
