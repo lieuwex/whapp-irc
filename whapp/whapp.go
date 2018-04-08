@@ -29,9 +29,14 @@ func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, 
 	options := chromedp.WithRunnerOptions(
 		runner.Path(chromePath),
 		runner.Port(9222),
+		runner.KillProcessGroup,
+
 		// runner.Flag("headless", true),
-		runner.Flag("disable-gpu", true),
-		runner.Flag("no-sandbox", true),
+		runner.DisableGPU,
+		runner.NoSandbox,
+
+		runner.NoFirstRun,
+		runner.NoDefaultBrowserCheck,
 	)
 
 	cdp, err := chromedp.New(ctx, options)
