@@ -141,7 +141,7 @@ type Message struct {
 	MediaData      MediaData `json:"mediaData"`
 	MediaKey       string    `json:"mediaKey"` // make this nicer
 	MimeType       string    `json:"mimetype"`
-	MediaType      string    `json:"type"`
+	MediaType      string    `json:"type"` // TODO: use this
 	MediaClientURL string    `json:"clientUrl"`
 	MediaFileHash  string    `json:"filehash"`
 	MediaFilename  string    `json:"filename"`
@@ -157,6 +157,8 @@ type Message struct {
 }
 
 func (msg *Message) DownloadMedia() ([]byte, error) {
+	// TODO
+
 	return exec.Command(
 		"python3",
 		"./download.py",

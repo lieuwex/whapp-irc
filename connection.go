@@ -378,13 +378,10 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 	for i, c := range conn.Chats {
 		if c.ID == chat.ID {
 			conn.Chats[i] = res
-			goto done
+			return res, nil
 		}
 	}
 	conn.Chats = append(conn.Chats, res)
-	goto done
-
-done:
 	return res, nil
 }
 
