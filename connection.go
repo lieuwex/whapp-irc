@@ -234,13 +234,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				to = conn.nickname
 			}
 
-			if msg.IsMedia {
+			_, ok := fs.HashToPath[msg.MediaFileHash]
+			if msg.IsMedia && !ok {
 				bytes, err := msg.DownloadMedia()
 				if err != nil {
 					fmt.Printf("err download %s\n", err.Error())
 					continue
 				}
-				_, err = fs.AddBlob(msg.ID.Serialized, getFileName(bytes), bytes)
+				_, err = fs.AddBlob(msg.MediaFileHash, getExtension(bytes), bytes)
 				if err != nil {
 					fmt.Printf("err addblob %s\n", err.Error())
 					continue
@@ -411,7 +412,7 @@ func (conn *Connection) setup() error {
 			return err
 		}
 
-		qrFile, err = fs.AddBlob("", "qr-"+strTimestamp(), bytes)
+		qrFile, err = fs.AddBlob("qr-"+strTimestamp(), "png", bytes)
 		if err != nil {
 			return err
 		}
@@ -462,7 +463,7 @@ func getMessageBody(msg *whapp.Message, contacts []Contact) string {
 
 	if msg.IsMedia {
 		res = "-- file --"
-		if f := fs.IDToPath[msg.ID.Serialized]; f != nil {
+		if f := fs.HashToPath[msg.MediaFileHash]; f != nil {
 			res = f.URL
 		}
 

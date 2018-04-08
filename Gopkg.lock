@@ -51,7 +51,7 @@
     "tethering",
     "tracing"
   ]
-  revision = "dfcd948f5402632d92038cc1138b6f041a6cbc32"
+  revision = "09388bf55294582da20e6afa1680608cd540accb"
 
 [[projects]]
   branch = "master"
@@ -121,12 +121,6 @@
   version = "v0.1.0"
 
 [[projects]]
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/skip2/go-qrcode"
   packages = [
@@ -144,7 +138,7 @@
     "tiff",
     "tiff/lzw"
   ]
-  revision = "f3a9b89b59def9194717c1d0bd4c0d08fa1afa7b"
+  revision = "f315e440302883054d0c2bd85486878cb4f8572c"
 
 [[projects]]
   name = "gopkg.in/h2non/filetype.v1"
@@ -167,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b4453166080184fee53d441a13dafa85a4cc2d976a32a991d54ececdc86ca554"
+  inputs-digest = "0d74fc4e4a094616f379ea648f4da9dd686d2e704e49cce9f1daf51519fd4b3d"
   solver-name = "gps-cdcl"
   solver-version = 1

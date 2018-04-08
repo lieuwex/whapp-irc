@@ -5,12 +5,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type File struct {
-	MessageID string
-	Path      string
-	URL       string
+	Hash string
+	Path string
+	URL  string
 }
 
 type FileServer struct {
@@ -18,24 +19,53 @@ type FileServer struct {
 	Port      string
 	Directory string
 
-	IDToPath map[string]*File
+	HashToPath map[string]*File
 
 	httpServer *http.Server
 }
 
 func MakeFileServer(host, port, dir string) (*FileServer, error) {
-	err := os.Mkdir("./"+dir, 0700)
-	if err != nil && !os.IsExist(err) {
-		return nil, err
-	}
-
-	return &FileServer{
+	fs := &FileServer{
 		Host:      host,
 		Port:      port,
 		Directory: dir,
 
-		IDToPath: make(map[string]*File),
-	}, nil
+		HashToPath: make(map[string]*File),
+	}
+
+	err := os.Mkdir("./"+dir, 0700)
+	if err != nil {
+		if !os.IsExist(err) {
+			return nil, err
+		}
+
+		files, err := ioutil.ReadDir("./" + dir)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+
+			fname := f.Name()
+			dotIndex := strings.LastIndexByte(fname, '.')
+			if dotIndex == -1 {
+				continue
+			}
+
+			hash, err := b64urltob64(fname[:dotIndex])
+			if err != nil {
+				continue
+			}
+			ext := fname[dotIndex+1:]
+
+			fs.HashToPath[hash] = fs.MakeFile(hash, ext)
+		}
+	}
+
+	return fs, nil
 }
 
 func (fs *FileServer) Start() error {
@@ -57,25 +87,34 @@ func (fs *FileServer) Stop() error {
 	return nil
 }
 
-func (fs *FileServer) MakeFile(messageID, filename string) *File {
-	if filename == "" {
+func (fs *FileServer) MakeFile(hash, ext string) *File {
+	if hash == "" {
 		return nil
 	}
 
-	url := fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, filename)
-	file := fmt.Sprintf("./%s/%s", fs.Directory, filename)
+	b32Hash, err := b64tob64url(hash)
+	if err != nil {
+		b32Hash = hash
+	}
+
+	url := fmt.Sprintf("http://%s:%s/%s.%s", fs.Host, fs.Port, b32Hash, ext)
+	file := fmt.Sprintf("./%s/%s.%s", fs.Directory, b32Hash, ext)
 
 	return &File{
-		MessageID: messageID,
-		URL:       url,
-		Path:      file,
+		Hash: hash,
+		URL:  url,
+		Path: file,
 	}
 }
 
-func (fs *FileServer) AddBlob(messageID string, filename string, bytes []byte) (*File, error) {
-	f := fs.MakeFile(messageID, filename)
+func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
+	if hash == "" || ext == "" || len(bytes) == 0 {
+		return nil, fmt.Errorf("hash, ext, or bytes can't be empty")
+	}
+
+	f := fs.MakeFile(hash, ext)
 	if f == nil {
-		return nil, fmt.Errorf("filename can't be empty")
+		return nil, fmt.Errorf("error while creating file object")
 	}
 
 	err := ioutil.WriteFile(f.Path, bytes, 0644)
@@ -83,13 +122,13 @@ func (fs *FileServer) AddBlob(messageID string, filename string, bytes []byte) (
 		return nil, err
 	}
 
-	if messageID != "" {
-		fs.IDToPath[messageID] = f
+	if hash != "" {
+		fs.HashToPath[hash] = f
 	}
 	return f, nil
 }
 
 func (fs *FileServer) RemoveFile(file *File) error {
-	delete(fs.IDToPath, file.MessageID)
+	delete(fs.HashToPath, file.Hash)
 	return os.Remove(file.Path)
 }

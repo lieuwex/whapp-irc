@@ -1,16 +1,15 @@
 package main
 
 import (
+	"encoding/base64"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/h2non/filetype"
 	"github.com/mozillazg/go-unidecode"
-	"github.com/satori/go.uuid"
 )
 
 func strTimestamp() string {
@@ -24,18 +23,6 @@ func getExtension(bytes []byte) string {
 	}
 
 	return typ.Extension
-}
-
-func getFileName(bytes []byte) string {
-	uid := uuid.NewV4().String()
-	fname := strings.Replace(uid, "-", "", -1)
-
-	ext := getExtension(bytes)
-	if ext != "" {
-		fname += "." + ext
-	}
-
-	return fname
 }
 
 var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
@@ -53,4 +40,20 @@ func onInterrupt(fn func()) {
 		fn()
 		os.Exit(1)
 	}()
+}
+
+func b64tob64url(str string) (string, error) {
+	bytes, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+func b64urltob64(str string) (string, error) {
+	bytes, err := base64.RawURLEncoding.DecodeString(str)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(bytes), nil
 }
