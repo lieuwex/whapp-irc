@@ -344,23 +344,35 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 	return nil
 }
 
+func (wi *WhappInstance) getNewMessages(ctx context.Context) ([]Message, error) {
+	var res []Message
+
+	if wi.LoginState != Loggedin {
+		return res, fmt.Errorf("not logged in")
+	}
+
+	err := wi.inject(ctx)
+	if err != nil {
+		return res, err
+	}
+
+	err = wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
+	if err != nil {
+		return res, err
+	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].Timestamp < res[j].Timestamp
+	})
+
+	return res, err
+}
+
 func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Duration) (<-chan Message, <-chan error) {
 	// REVIEW: is this still correct when we get logged out?
 
 	errCh := make(chan error)
 	messageCh := make(chan Message)
-	var err error
-
-	if wi.LoginState != Loggedin {
-		errCh <- fmt.Errorf("not logged in")
-		goto err
-	}
-
-	err = wi.inject(ctx)
-	if err != nil {
-		errCh <- err
-		goto err
-	}
 
 	go func() {
 		defer close(errCh)
@@ -372,17 +384,11 @@ func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Du
 				return
 			}
 
-			var res []Message
-
-			err := wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
+			res, err := wi.getNewMessages(ctx)
 			if err != nil {
 				errCh <- err
 				return
 			}
-
-			sort.SliceStable(res, func(i, j int) bool {
-				return res[i].Timestamp < res[j].Timestamp
-			})
 
 			for _, msg := range res {
 				if msg.IsNotification {
@@ -397,11 +403,6 @@ func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Du
 		}
 	}()
 
-	return messageCh, errCh
-
-err:
-	close(errCh)
-	close(messageCh)
 	return messageCh, errCh
 }
 
