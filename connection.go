@@ -373,7 +373,7 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 		rawChat: chat,
 	}
 
-	fmt.Printf("%s\t\t\t\t%d participants\n", res.Identifier(), len(res.Participants))
+	fmt.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
 
 	for i, c := range conn.Chats {
 		if c.ID == chat.ID {
