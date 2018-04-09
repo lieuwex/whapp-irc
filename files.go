@@ -71,7 +71,7 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 func (fs *FileServer) Start() error {
 	fs.httpServer = &http.Server{
 		Addr:    ":" + fs.Port,
-		Handler: http.FileServer(http.Dir(fs.Directory)),
+		Handler: noDirListing(http.FileServer(http.Dir(fs.Directory))),
 	}
 
 	return fs.httpServer.ListenAndServe()
