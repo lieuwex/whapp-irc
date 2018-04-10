@@ -1,14 +1,13 @@
 import binascii
 import aiohttp
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 from axolotl.kdf.hkdfv3 import HKDFv3
 from axolotl.util.byteutil import ByteUtil
 from base64 import b64decode, b64encode
 from io import BytesIO
 import asyncio
 import sys
-
-loop = asyncio.get_event_loop()
 
 
 async def download_file(url):
@@ -30,12 +29,13 @@ async def download_media(client_url, media_key, crypt_key):
     cipher_key = parts[1]
     e_file = file_data[:-10]
 
-    AES.key_size = 128
-    cr_obj = AES.new(key=cipher_key, mode=AES.MODE_CBC, IV=iv)
+    cr_obj = Cipher(algorithms.AES(cipher_key), modes.CBC(iv), backend=default_backend())
+    decryptor = cr_obj.decryptor()
 
-    res = cr_obj.decrypt(e_file)
+    res = decryptor.update(e_file) + decryptor.finalize()
     sys.stdout.buffer.write(res)
     sys.stdout.buffer.flush()
 
 
+loop = asyncio.get_event_loop()
 loop.run_until_complete(download_media(sys.argv[1], sys.argv[2], sys.argv[3]))
