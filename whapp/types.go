@@ -161,6 +161,9 @@ type Message struct {
 func (msg *Message) DownloadMedia() ([]byte, error) {
 	// TODO
 
+	println(msg.MediaType)
+	println("./download.py", msg.MediaClientURL, msg.MediaKey, GetCryptKey(msg.MediaType))
+
 	return exec.Command(
 		"python3",
 		"./download.py",
