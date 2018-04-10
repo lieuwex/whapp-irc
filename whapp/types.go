@@ -151,6 +151,8 @@ type Message struct {
 	Longitude      float64 `json:"lng"`
 	LocationString string  `json:"loc"`
 
+	PDFPageCount uint `json:"pageCount"`
+
 	QuotedMessageObject *Message `json:"quotedMsgObj"`
 
 	Chat Chat `json:"chat"`
