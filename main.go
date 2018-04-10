@@ -14,6 +14,7 @@ const (
 )
 
 var fs *FileServer
+var userDb *Database
 
 func handleSocket(socket *net.TCPConn) {
 	conn, err := MakeConnection()
@@ -40,6 +41,12 @@ func main() {
 	}
 
 	var err error
+
+	userDb, err = MakeDatabase("db/users")
+	if err != nil {
+		panic(err)
+	}
+
 	fs, err = MakeFileServer(host, fileServerPort, "files")
 	if err != nil {
 		panic(err)

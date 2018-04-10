@@ -51,7 +51,7 @@
     "tethering",
     "tracing"
   ]
-  revision = "09388bf55294582da20e6afa1680608cd540accb"
+  revision = "ad3a5240868fb8286c9b79ae4138abf87995ad9d"
 
 [[projects]]
   branch = "master"
@@ -106,10 +106,10 @@
   revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
 
 [[projects]]
-  name = "github.com/mattn/go-sqlite3"
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "6c771bb9887719704b210e87e934f08be014bdb1"
-  version = "v1.6.0"
+  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
   name = "github.com/mozillazg/go-unidecode"
@@ -161,6 +161,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d74fc4e4a094616f379ea648f4da9dd686d2e704e49cce9f1daf51519fd4b3d"
+  inputs-digest = "c46d1ac6a64dcd73dde173386570ceb0eba989d2dab77ffcefc24a644b126b7f"
   solver-name = "gps-cdcl"
   solver-version = 1

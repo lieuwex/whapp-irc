@@ -10,6 +10,7 @@ import (
 	"whapp-irc/whapp"
 
 	"github.com/avast/retry-go"
+	"github.com/mitchellh/mapstructure"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
@@ -392,6 +393,21 @@ func (conn *Connection) setup() error {
 		return err
 	}
 
+	obj, found, err := userDb.GetItem(conn.nickname)
+	if err != nil {
+		return err
+	} else if found {
+		var user User
+		if err := mapstructure.Decode(obj, &user); err != nil {
+			panic(err)
+		}
+
+		err := conn.bridge.WI.SetLocalStorage(conn.bridge.ctx, user.LocalStorage)
+		if err != nil {
+			fmt.Printf("error while setting local storage: %s\n", err.Error())
+		}
+	}
+
 	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
 	if err != nil {
 		return err
@@ -421,6 +437,19 @@ func (conn *Connection) setup() error {
 		return err
 	}
 	conn.status("logged in")
+
+	localStorage, err := conn.bridge.WI.GetLocalStorage(conn.bridge.ctx)
+	if err != nil {
+		fmt.Printf("error while getting local storage: %s\n", err.Error())
+	} else {
+		err := userDb.SaveItem(conn.nickname, User{
+			Nickname:     conn.nickname,
+			LocalStorage: localStorage,
+		})
+		if err != nil {
+			return err
+		}
+	}
 
 	if qrFile != nil {
 		if err = fs.RemoveFile(qrFile); err != nil {

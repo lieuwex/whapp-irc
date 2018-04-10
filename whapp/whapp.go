@@ -2,6 +2,7 @@ package whapp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -73,6 +74,36 @@ func (wi *WhappInstance) Open(ctx context.Context) (LoginState, error) {
 
 	wi.LoginState = state
 	return state, nil
+}
+
+func (wi *WhappInstance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
+	var str string
+
+	err := wi.CDP.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
+	if err != nil {
+		return nil, err
+	}
+
+	var res map[string]string
+
+	if err := json.Unmarshal([]byte(str), &res); err != nil {
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (wi *WhappInstance) SetLocalStorage(ctx context.Context, localStorage map[string]string) error {
+	var idc []byte
+
+	tasks := chromedp.Tasks{chromedp.Navigate(URL)}
+
+	for key, val := range localStorage {
+		str := fmt.Sprintf("localStorage.setItem(%s, %s)", strconv.Quote(key), strconv.Quote(val))
+		tasks = append(tasks, chromedp.Evaluate(str, &idc))
+	}
+
+	return wi.CDP.Run(ctx, tasks)
 }
 
 func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
