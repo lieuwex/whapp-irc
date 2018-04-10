@@ -164,7 +164,7 @@ func (msg *Message) DownloadMedia() ([]byte, error) {
 		"./download.py",
 		msg.MediaClientURL,
 		msg.MediaKey,
-		CryptKeys[msg.MediaType],
+		GetCryptKey(msg.MediaType),
 	).Output()
 }
 
