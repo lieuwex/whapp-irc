@@ -75,9 +75,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
-	welcome := func() {
+	welcome := func() (setup bool, err error) {
 		if conn.welcomed || conn.nickname == "" {
-			return
+			return false, nil
 		}
 
 		conn.writeIRC(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
@@ -85,7 +85,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 		conn.welcomed = true
 
-		err := retry.Do(func() error {
+		err = retry.Do(func() error {
 			conn.bridge.Stop()
 			err := conn.setup()
 			if err != nil {
@@ -94,10 +94,11 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			return err
 		}, retry.Attempts(5), retry.Delay(time.Second))
 		if err != nil {
-			panic(err) // REVIEW
+			return false, err
 		}
 
 		close(conn.welcomeCh)
+		return true, nil
 	}
 
 	go func() {
@@ -112,7 +113,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			switch msg.Command {
 			case "NICK":
 				conn.nickname = msg.Params[0]
-				welcome()
+				_, err := welcome()
+				if err != nil {
+					status("giving up trying to setup whapp bridge: " + err.Error())
+					socket.Close()
+					close(conn.waitch)
+					return
+				}
 
 			case "CAP":
 				switch msg.Params[0] {
