@@ -20,6 +20,10 @@ type Database struct {
 }
 
 func MakeDatabase(folder string) (*Database, error) {
+	if err := os.MkdirAll(folder, 0700); err != nil {
+		return nil, err
+	}
+
 	return &Database{
 		Folder: folder,
 	}, nil
