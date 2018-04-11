@@ -272,7 +272,7 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 				msg = whappGo.msgToJSON(msg);
 
 				console.log(msg);
-				res.push(msg);
+				res.unshift(msg);
 			}
 		}
 
