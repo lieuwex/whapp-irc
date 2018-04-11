@@ -10,30 +10,27 @@ const MessageIDListSize = 750
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 var nonNumberRegex = regexp.MustCompile(`[^\d]`)
 
-type Contact struct {
-	WhappContact whapp.Contact
-	IsAdmin      bool
+type Participant whapp.Participant
+
+func (p *Participant) FullName() string {
+	return p.Contact.FormattedName
 }
 
-func (c *Contact) FullName() string {
-	return c.WhappContact.FormattedName
-}
-
-func (c *Contact) SafeName() string {
-	str := c.FullName()
-	if numberRegex.MatchString(str) && IRCsafeString(c.WhappContact.PushName) != "" {
-		str = c.WhappContact.PushName
+func (p *Participant) SafeName() string {
+	str := p.FullName()
+	if numberRegex.MatchString(str) && IRCsafeString(p.Contact.PushName) != "" {
+		str = p.Contact.PushName
 	}
 
 	return IRCsafeString(str)
 }
 
 type Chat struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   string
+	Name string
 
-	IsGroupChat  bool      `json:"isGroupChat"`
-	Participants []Contact `json:"participants"`
+	IsGroupChat  bool
+	Participants []Participant
 
 	Joined     bool
 	MessageIDs []string

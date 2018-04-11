@@ -300,20 +300,20 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	conn.writeIRC(fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name))
 
 	names := make([]string, 0)
-	for _, contact := range chat.Participants {
-		if contact.WhappContact.IsMe {
-			if contact.IsAdmin {
+	for _, participant := range chat.Participants {
+		if participant.Contact.IsMe {
+			if participant.IsAdmin {
 				conn.writeIRC(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.nickname))
 			}
 			continue
 		}
 
 		prefix := ""
-		if contact.IsAdmin {
+		if participant.IsAdmin {
 			prefix = "@"
 		}
 
-		names = append(names, prefix+contact.SafeName())
+		names = append(names, prefix+participant.SafeName())
 	}
 
 	conn.writeIRC(fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
@@ -361,22 +361,15 @@ func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 	return nil
 }
 
-func formatContact(contact whapp.Contact, isAdmin bool) Contact {
-	return Contact{
-		WhappContact: contact,
-		IsAdmin:      isAdmin,
-	}
-}
-
 func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 	participants, err := chat.Participants(conn.bridge.ctx, conn.bridge.WI)
 	if err != nil {
 		return nil, err
 	}
 
-	converted := make([]Contact, len(participants))
+	converted := make([]Participant, len(participants))
 	for i, p := range participants {
-		converted[i] = formatContact(p.Contact, p.IsAdmin)
+		converted[i] = Participant(p)
 	}
 
 	res := &Chat{
@@ -497,13 +490,13 @@ func (conn *Connection) setup() error {
 	return nil
 }
 
-func getMessageBody(msg *whapp.Message, contacts []Contact) string {
-	whappContacts := make([]whapp.Contact, len(contacts))
-	for i, c := range contacts {
-		whappContacts[i] = c.WhappContact
+func getMessageBody(msg *whapp.Message, participants []Participant) string {
+	whappParticipants := make([]whapp.Participant, len(participants))
+	for i, p := range participants {
+		whappParticipants[i] = whapp.Participant(p)
 	}
 
-	res := msg.FormatBody(whappContacts)
+	res := msg.FormatBody(whappParticipants)
 
 	if msg.IsMMS {
 		res = "-- file --"
@@ -517,6 +510,14 @@ func getMessageBody(msg *whapp.Message, contacts []Contact) string {
 	}
 
 	return res
+}
+
+func formatContact(contact whapp.Contact, isAdmin bool) Participant {
+	return Participant{
+		ID:      contact.ID,
+		IsAdmin: isAdmin,
+		Contact: contact,
+	}
 }
 
 func formatPrivateMessage(date time.Time, from, to, line string) string {
