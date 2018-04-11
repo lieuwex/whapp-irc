@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -248,7 +249,17 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					fmt.Printf("err download %s\n", err.Error())
 					continue
 				}
-				_, err = fs.AddBlob(msg.MediaFileHash, getExtension(bytes), bytes)
+
+				ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
+				if ext == "" {
+					ext = filepath.Ext(msg.MediaFilename)[1:]
+				}
+
+				_, err = fs.AddBlob(
+					msg.MediaFileHash,
+					ext,
+					bytes,
+				)
 				if err != nil {
 					fmt.Printf("err addblob %s\n", err.Error())
 					continue

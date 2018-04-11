@@ -49,17 +49,23 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 				continue
 			}
 
+			var b64url string
+			var ext string
+
 			fname := f.Name()
 			dotIndex := strings.LastIndexByte(fname, '.')
 			if dotIndex == -1 {
-				continue
+				b64url = fname
+				ext = ""
+			} else {
+				b64url = fname[:dotIndex]
+				ext = fname[dotIndex+1:]
 			}
 
-			hash, err := b64urltob64(fname[:dotIndex])
+			hash, err := b64urltob64(b64url)
 			if err != nil {
 				continue
 			}
-			ext := fname[dotIndex+1:]
 
 			fs.HashToPath[hash] = fs.MakeFile(hash, ext)
 		}
@@ -97,8 +103,15 @@ func (fs *FileServer) MakeFile(hash, ext string) *File {
 		b32Hash = hash
 	}
 
-	url := fmt.Sprintf("http://%s:%s/%s.%s", fs.Host, fs.Port, b32Hash, ext)
-	file := fmt.Sprintf("./%s/%s.%s", fs.Directory, b32Hash, ext)
+	var fname string
+	if ext != "" {
+		fname = b32Hash + "." + ext
+	} else {
+		fname = b32Hash
+	}
+
+	url := fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, fname)
+	file := fmt.Sprintf("./%s/%s", fs.Directory, fname)
 
 	return &File{
 		Hash: hash,
@@ -108,8 +121,8 @@ func (fs *FileServer) MakeFile(hash, ext string) *File {
 }
 
 func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
-	if hash == "" || ext == "" || len(bytes) == 0 {
-		return nil, fmt.Errorf("hash, ext, or bytes can't be empty")
+	if hash == "" || len(bytes) == 0 {
+		return nil, fmt.Errorf("hash or bytes can't be empty")
 	}
 
 	f := fs.MakeFile(hash, ext)

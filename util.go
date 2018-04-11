@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,7 +25,32 @@ func getExtension(bytes []byte) string {
 		return ""
 	}
 
-	return typ.Extension
+	res := typ.Extension
+	if res == "unknown" {
+		return ""
+	}
+	return res
+}
+
+func getExtensionByMime(typ string) (string, error) {
+	extensions, err := mime.ExtensionsByType(typ)
+	if err != nil {
+		return "", err
+	}
+
+	if len(extensions) == 0 {
+		return "", nil
+	}
+
+	return extensions[0][1:], nil
+}
+
+func getExtensionByMimeOrBytes(mime string, bytes []byte) string {
+	if res, err := getExtensionByMime(mime); res != "" && err != nil {
+		return res
+	}
+
+	return getExtension(bytes)
 }
 
 var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
