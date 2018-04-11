@@ -13,7 +13,6 @@ import (
 )
 
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
-var mentionRegex = regexp.MustCompile(`@\d+`)
 
 type PhoneInfo struct {
 	WhatsAppVersion    string `json:"wa_version"`
@@ -170,22 +169,33 @@ func (msg *Message) DownloadMedia() ([]byte, error) {
 	).Output()
 }
 
-func (msg *Message) FormatBody(contacts []Contact) string {
-	return mentionRegex.ReplaceAllStringFunc(msg.Body, func(s string) string {
-		number := s[1:]
+func (msg *Message) FormatBody(participants []Participant) string {
+	res := msg.Body
 
-		for _, c := range contacts {
-			if strings.HasPrefix(c.ID, number) {
-				return "@" + c.GetName()
+	if !msg.Chat.IsGroupChat {
+		return res
+	}
+
+	for _, id := range msg.MentionedIDs {
+		for _, c := range participants {
+			if c.ID == id {
+				number := id[:strings.IndexByte(id, '@')]
+
+				oldMention := "@" + number
+				newMention := "@" + c.Contact.GetName()
+
+				res = strings.Replace(res, oldMention, newMention, -1)
+
+				break
 			}
 		}
+	}
 
-		return s
-	})
+	return res
 }
 
-func (msg *Message) Content(contacts []Contact) string {
-	res := msg.FormatBody(contacts)
+func (msg *Message) Content(participants []Participant) string {
+	res := msg.FormatBody(participants)
 
 	if msg.IsMMS {
 		res = "-- file --"
