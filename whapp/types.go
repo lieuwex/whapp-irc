@@ -248,6 +248,14 @@ type Chat struct {
 	IsGroupChat bool `json:"isGroup"`
 }
 
+func (c *Chat) Title() string {
+	res := c.Name
+	if res == "" && !c.IsGroupChat {
+		res = c.Contact.GetName()
+	}
+	return res
+}
+
 func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participant, error) {
 	var res []Participant
 
