@@ -266,9 +266,13 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 
 				msg.__x_isNewMsg = false;
 
-				if (msg.isMedia && !msg.clientUrl) {
+				if (
+					(msg.isMedia && !msg.clientUrl) ||
+					(msg.type === 'location' && !msg.body)
+				) {
 					continue;
 				}
+
 				msg = whappGo.msgToJSON(msg);
 
 				console.log(msg);
