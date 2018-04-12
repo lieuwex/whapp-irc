@@ -47,7 +47,13 @@ func (c *Chat) Identifier() string {
 	if c.IsGroupChat {
 		prefix = "#"
 	}
-	return prefix + c.SafeName()
+
+	name := c.SafeName()
+	if !c.IsGroupChat && name[0] == '+' {
+		name = name[1:]
+	}
+
+	return prefix + name
 }
 
 func (c *Chat) AddMessageID(id string) {
