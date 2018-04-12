@@ -374,7 +374,7 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 
 	res := &Chat{
 		ID:   chat.ID,
-		Name: chat.Name,
+		Name: chat.Title(),
 
 		IsGroupChat:  chat.IsGroupChat,
 		Participants: converted,
@@ -385,7 +385,11 @@ func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
 		rawChat: chat,
 	}
 
-	fmt.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
+	if chat.IsGroupChat {
+		fmt.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
+	} else {
+		fmt.Println(res.Identifier())
+	}
 
 	for i, c := range conn.Chats {
 		if c.ID == chat.ID {
