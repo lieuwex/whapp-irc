@@ -20,9 +20,9 @@ const (
 )
 
 type WhappInstance struct {
-	CDP        *chromedp.CDP
 	LoginState LoginState
 
+	cdp      *chromedp.CDP
 	injected bool
 }
 
@@ -46,9 +46,9 @@ func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, 
 	}
 
 	return &WhappInstance{
-		CDP:        cdp,
 		LoginState: Loggedout,
 
+		cdp:      cdp,
 		injected: false,
 	}, nil
 }
@@ -57,7 +57,7 @@ func (wi *WhappInstance) Open(ctx context.Context) (LoginState, error) {
 	var state LoginState
 	var loggedIn bool
 
-	err := wi.CDP.Run(ctx, chromedp.Tasks{
+	err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(URL),
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
@@ -79,7 +79,7 @@ func (wi *WhappInstance) Open(ctx context.Context) (LoginState, error) {
 func (wi *WhappInstance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
 	var str string
 
-	err := wi.CDP.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (wi *WhappInstance) SetLocalStorage(ctx context.Context, localStorage map[s
 		tasks = append(tasks, chromedp.Evaluate(str, &idc))
 	}
 
-	return wi.CDP.Run(ctx, tasks)
+	return wi.cdp.Run(ctx, tasks)
 }
 
 func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
@@ -112,7 +112,7 @@ func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
 	var code string
 	var ok bool
 
-	err := wi.CDP.Run(ctx, chromedp.Tasks{
+	err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.WaitVisible("._2EZ_m"), // wait for QR
 		chromedp.AttributeValue("._2EZ_m", "data-ref", &code, &ok),
 	})
@@ -128,7 +128,7 @@ func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
 }
 
 func (wi *WhappInstance) WaitLogin(ctx context.Context) error {
-	err := wi.CDP.Run(ctx, chromedp.WaitVisible("._3ZW2E"))
+	err := wi.cdp.Run(ctx, chromedp.WaitVisible("._3ZW2E"))
 	if err != nil {
 		panic(err)
 	}
@@ -143,7 +143,7 @@ func (wi *WhappInstance) GetMe(ctx context.Context) (Me, error) {
 		return res, fmt.Errorf("not logged in")
 	}
 
-	err := wi.CDP.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
 	if err != nil {
 		return res, err
 	}
@@ -370,8 +370,7 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 	`
 
 	var idc []byte
-	err := wi.CDP.Run(ctx, chromedp.Evaluate(script, &idc))
-	if err != nil {
+	if err := wi.cdp.Run(ctx, chromedp.Evaluate(script, &idc)); err != nil {
 		return err
 	}
 
@@ -386,12 +385,11 @@ func (wi *WhappInstance) getNewMessages(ctx context.Context) ([]Message, error) 
 		return res, fmt.Errorf("not logged in")
 	}
 
-	err := wi.inject(ctx)
-	if err != nil {
+	if err := wi.inject(ctx); err != nil {
 		return res, err
 	}
 
-	err = wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
 	if err != nil {
 		return res, err
 	}
@@ -449,15 +447,14 @@ func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string,
 		return fmt.Errorf("not logged in")
 	}
 
-	err := wi.inject(ctx)
-	if err != nil {
+	if err := wi.inject(ctx); err != nil {
 		return err
 	}
 
 	str := fmt.Sprintf("whappGo.sendMessage(%s, %s)", strconv.Quote(chatID), strconv.Quote(message))
 
 	var idc []byte
-	return wi.CDP.Run(ctx, chromedp.Evaluate(str, &idc))
+	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc))
 }
 
 func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
@@ -467,12 +464,11 @@ func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
 		return res, fmt.Errorf("not logged in")
 	}
 
-	err := wi.inject(ctx)
-	if err != nil {
+	if err := wi.inject(ctx); err != nil {
 		return res, err
 	}
 
-	err = wi.CDP.Run(ctx, chromedp.Evaluate("whappGo.getAllChats()", &res))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getAllChats()", &res))
 	if err != nil {
 		return res, err
 	}
@@ -481,10 +477,8 @@ func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
 }
 
 func (wi *WhappInstance) Shutdown(ctx context.Context) error {
-	err := wi.CDP.Shutdown(ctx)
-	if err != nil {
+	if err := wi.cdp.Shutdown(ctx); err != nil {
 		return err
 	}
-
-	return wi.CDP.Wait()
+	return wi.cdp.Wait()
 }

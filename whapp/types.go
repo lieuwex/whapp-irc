@@ -267,14 +267,13 @@ func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participa
 		return res, fmt.Errorf("not logged in")
 	}
 
-	err := wi.inject(ctx)
-	if err != nil {
+	if err := wi.inject(ctx); err != nil {
 		return res, err
 	}
 
 	str := fmt.Sprintf("whappGo.getGroupParticipants(%s)", strconv.Quote(c.ID))
 
-	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
 		return res, err
 	}
@@ -289,14 +288,13 @@ func (c *Chat) GetPresence(ctx context.Context, wi *WhappInstance) (Presence, er
 		return res, fmt.Errorf("not logged in")
 	}
 
-	err := wi.inject(ctx)
-	if err != nil {
+	if err := wi.inject(ctx); err != nil {
 		return res, err
 	}
 
 	str := fmt.Sprintf("whappGo.getPresence(%s)", strconv.Quote(c.ID))
 
-	err = wi.CDP.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
 		return res, err
 	}

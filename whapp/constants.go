@@ -11,8 +11,7 @@ var cryptKeys = map[string]string{
 }
 
 func GetCryptKey(typ string) string {
-	res, found := cryptKeys[typ]
-	if found {
+	if res, found := cryptKeys[typ]; found {
 		return res
 	}
 
