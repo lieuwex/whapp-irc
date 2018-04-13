@@ -113,7 +113,7 @@ func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
 	var ok bool
 
 	err := wi.cdp.Run(ctx, chromedp.Tasks{
-		chromedp.WaitVisible("._2EZ_m"), // wait for QR
+		chromedp.WaitVisible("[alt='Scan me!']"), // wait for QR
 		chromedp.AttributeValue("._2EZ_m", "data-ref", &code, &ok),
 	})
 	if err != nil {
