@@ -151,6 +151,51 @@ func (wi *WhappInstance) GetMe(ctx context.Context) (Me, error) {
 	return res, nil
 }
 
+func (wi *WhappInstance) getLoggedIn(ctx context.Context) (bool, error) {
+	var res bool
+	action := chromedp.Evaluate("Store.Conn.clientToken != null", &res)
+	return res, wi.cdp.Run(ctx, action)
+}
+
+func (wi *WhappInstance) ListenLoggedIn(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
+	// TODO: we could make this nicer with waiting on divs
+
+	errCh := make(chan error)
+	resCh := make(chan bool)
+
+	go func() {
+		defer close(errCh)
+		defer close(resCh)
+
+		prev := false
+		isFirst := true
+
+		for {
+			if err := ctx.Err(); err != nil {
+				errCh <- err
+				return
+			}
+
+			res, err := wi.getLoggedIn(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			if res != prev && !isFirst {
+				resCh <- res
+			}
+
+			prev = res
+			isFirst = false
+
+			time.Sleep(interval)
+		}
+	}()
+
+	return resCh, errCh
+}
+
 /*
 func (wi *WhappInstance) ListenConnectionState(ctx context.Context, stateCh chan ConnectionState) error {
 
