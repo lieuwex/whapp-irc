@@ -48,11 +48,22 @@ func MakeConnection() (*Connection, error) {
 }
 
 func (conn *Connection) BindSocket(socket *net.TCPConn) error {
+	defer socket.Close()
+	defer conn.bridge.Stop()
+
 	conn.socket = socket
 	write := conn.writeIRC
 	status := conn.status
 
 	ircCh := make(chan *irc.Message)
+
+	closed := false
+	closeWaitCh := func() {
+		if !closed {
+			close(conn.waitch)
+			closed = true
+		}
+	}
 
 	// listen for and parse messages.
 	// we want to do this outside the next irc message handle loop, so we can
@@ -63,7 +74,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			msg, err := decoder.Decode()
 			if err != nil {
 				fmt.Printf("error while listening for IRC messages: %s\n", err.Error())
-				close(conn.waitch)
+				closeWaitCh()
 				return
 			}
 
@@ -118,7 +129,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				if err != nil {
 					status("giving up trying to setup whapp bridge: " + err.Error())
 					socket.Close()
-					close(conn.waitch)
+					closeWaitCh()
 					return
 				}
 
@@ -194,6 +205,36 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 	<-conn.welcomeCh
 
+
+	go func() {
+		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
+
+		for {
+			var res bool
+
+			select {
+			case <-conn.waitch:
+				return
+
+			case err := <-errCh:
+				fmt.Printf("error while listening for whatsapp loggedin state: %s\n", err.Error())
+				closeWaitCh()
+				return
+
+			case res = <-resCh:
+			}
+
+			if res {
+				continue
+			}
+
+			fmt.Println("logged out of whatsapp!")
+
+			closeWaitCh()
+			return
+		}
+	}()
+
 	go func() {
 		var err error
 
@@ -205,7 +246,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case err := <-conn.errCh:
 				fmt.Printf("error while listening for whatsapp messages: %s\n", err.Error())
-				close(conn.waitch)
+				closeWaitCh()
 				return
 
 			case msg = <-conn.messageCh:
@@ -432,7 +473,7 @@ func (conn *Connection) setup() error {
 	if state == whapp.Loggedout {
 		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
 		if err != nil {
-			return fmt.Errorf("qr code not loaded correctly or smth")
+			return fmt.Errorf("Error while retrieving login code: %s", err.Error())
 		}
 
 		bytes, err := qrcode.Encode(code, qrcode.High, 512)
