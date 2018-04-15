@@ -502,8 +502,8 @@ func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string,
 	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc))
 }
 
-func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]*Chat, error) {
-	var res []*Chat
+func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]Chat, error) {
+	var res []Chat
 
 	if wi.LoginState != Loggedin {
 		return res, fmt.Errorf("not logged in")

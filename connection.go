@@ -254,7 +254,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			chat := conn.GetChatByID(msg.Chat.ID)
 			if chat == nil {
-				chat, err = conn.addChat(&msg.Chat)
+				chat, err = conn.addChat(msg.Chat)
 				if err != nil {
 					fmt.Printf("err %s\n", err.Error())
 					continue
@@ -402,7 +402,7 @@ func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 	return nil
 }
 
-func (conn *Connection) addChat(chat *whapp.Chat) (*Chat, error) {
+func (conn *Connection) addChat(chat whapp.Chat) (*Chat, error) {
 	participants, err := chat.Participants(conn.bridge.ctx, conn.bridge.WI)
 	if err != nil {
 		return nil, err
