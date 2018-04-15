@@ -110,7 +110,13 @@ func (fs *FileServer) MakeFile(hash, ext string) *File {
 		fname = b32Hash
 	}
 
-	url := fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, fname)
+	var url string
+	if fs.Port == "80" {
+		url = fmt.Sprintf("http://%s/%s", fs.Host, fname)
+	} else {
+		url = fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, fname)
+	}
+
 	file := fmt.Sprintf("./%s/%s", fs.Directory, fname)
 
 	return &File{
