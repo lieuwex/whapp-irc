@@ -14,6 +14,7 @@ import (
 
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 
+// PhoneInfo contains info about the connected phone.
 type PhoneInfo struct {
 	WhatsAppVersion    string `json:"wa_version"`
 	OsVersion          string `json:"os_version"`
@@ -22,6 +23,7 @@ type PhoneInfo struct {
 	OsBuildNumber      string `json:"os_build_number"`
 }
 
+// Me contains info about the user logged in.
 type Me struct {
 	LoginCode         string    `json:"ref"`
 	LoginCodeTTL      int       `json:"refTTL"`
@@ -40,13 +42,7 @@ type Me struct {
 	Phone             PhoneInfo `json:"phone"`
 }
 
-type MessageID struct {
-	FromMe     bool   `json:"fromMe"`
-	ChatID     string `json:"remote"`
-	ID         string `json:"id"`
-	Serialized string `json:"_serialized"`
-}
-
+// Contact represents a contact in the users contacts list.
 type Contact struct {
 	ID                string `json:"id"`
 	Name              string `json:"name"`
@@ -68,8 +64,13 @@ type Contact struct {
 	FormattedName string `json:"formattedName"`
 }
 
-// REVIEW: better name
+// GetName returns the name of the current contact, tries to get the best
+// matching name possible.
+// When the contact doesn't have a name in the user's contacts, this function
+// will try to use the PushName, if the contact has one.
 func (c *Contact) GetName() string {
+	// REVIEW: better name
+
 	str := c.FormattedName
 	if numberRegex.MatchString(str) && c.PushName != "" {
 		str = c.PushName
@@ -77,12 +78,22 @@ func (c *Contact) GetName() string {
 	return str
 }
 
+// Participant represents a participants in a group chat.
 type Participant struct {
 	ID      string  `json:"id"`
 	IsAdmin bool    `json:"isAdmin"`
 	Contact Contact `json:"contact"`
 }
 
+// MessageID contains various IDs for a message.
+type MessageID struct {
+	FromMe     bool   `json:"fromMe"`
+	ChatID     string `json:"remote"`
+	ID         string `json:"id"`
+	Serialized string `json:"_serialized"`
+}
+
+// MediaPreview contains information about the preview of a media message.
 type MediaPreview struct {
 	RetainCount       int    `json:"_retainCount"`
 	InAutoreleasePool bool   `json:"_inAutoreleasePool"`
@@ -91,6 +102,7 @@ type MediaPreview struct {
 	Mimetype          string `json:"_mimetype"`
 }
 
+// MediaData contains information about the media of a media message.
 type MediaData struct {
 	Type        string       `json:"type"`
 	MediaStage  string       `json:"mediaStage"`
@@ -107,6 +119,9 @@ type MediaData struct {
 	// Streamable  bool         `json:"streamable"`
 }
 
+// Message represents any kind of message on Whatsapp.
+// This also means the stuff like notifications (in the sense of e2e
+// notifications, for example) are also represented by this struct.
 type Message struct {
 	ID         MessageID `json:"id"`
 	Subtype    string    `json:"subtype"`
@@ -157,18 +172,25 @@ type Message struct {
 	Chat Chat `json:"chat"`
 }
 
+// DownloadMedia downloads the media included in this message, if any
 func (msg *Message) DownloadMedia() ([]byte, error) {
 	// TODO
+
+	if !msg.IsMMS {
+		return make([]byte, 0), nil
+	}
 
 	return exec.Command(
 		"python3",
 		"./download.py",
 		msg.MediaClientURL,
 		msg.MediaKey,
-		GetCryptKey(msg.MediaType),
+		getCryptKey(msg.MediaType),
 	).Output()
 }
 
+// FormatBody returns the body of the current message, with mentions correctly
+// resolved.
 func (msg *Message) FormatBody(participants []Participant) string {
 	res := msg.Body
 
@@ -194,6 +216,8 @@ func (msg *Message) FormatBody(participants []Participant) string {
 	return res
 }
 
+// Content returns the body of the current message, with mentions correctly
+// resolved with support for files (just prints "-- file --") and their captions.
 func (msg *Message) Content(participants []Participant) string {
 	res := msg.FormatBody(participants)
 
@@ -208,10 +232,13 @@ func (msg *Message) Content(participants []Participant) string {
 	return res
 }
 
+// Time returns the timestamp of the current message converted to a time.Time
+// instance.
 func (msg *Message) Time() time.Time {
 	return time.Unix(msg.Timestamp, 0)
 }
 
+// Presence contains information about the presence of a contact of the user.
 type Presence struct {
 	ID        string `json:"id"`
 	Timestamp int64  `json:"timestamp"`
@@ -224,10 +251,13 @@ type Presence struct {
 	IsUser     bool `json:"isUser"`
 }
 
+// Time returns the timestamp of the current presence converted to a time.Time
+// instance.
 func (p *Presence) Time() time.Time {
 	return time.Unix(p.Timestamp, 0)
 }
 
+// Chat represents a chat in WhatsApp.
 type Chat struct {
 	ID                    string    `json:"id"`
 	PendingMsgs           bool      `json:"pendingMsgs"`
@@ -248,6 +278,8 @@ type Chat struct {
 	IsGroupChat bool `json:"isGroup"`
 }
 
+// Title returns the name of the current chat, with support for contacts without
+// a name.
 func (c *Chat) Title() string {
 	res := c.Name
 	if res == "" && !c.IsGroupChat {
@@ -256,7 +288,9 @@ func (c *Chat) Title() string {
 	return res
 }
 
-func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participant, error) {
+// Participants retrieves and returns a slice containing all participants of the
+// current group chat.
+func (c *Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, error) {
 	var res []Participant
 
 	if !c.IsGroupChat {
@@ -281,7 +315,10 @@ func (c *Chat) Participants(ctx context.Context, wi *WhappInstance) ([]Participa
 	return res, nil
 }
 
-func (c *Chat) GetPresence(ctx context.Context, wi *WhappInstance) (Presence, error) {
+// GetPresence retrieves and returns the presence of the current private chat.
+func (c *Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
+	// TODO REVIEW
+
 	var res Presence
 
 	if wi.LoginState != Loggedin {

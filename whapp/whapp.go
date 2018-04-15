@@ -12,21 +12,26 @@ import (
 	"github.com/chromedp/chromedp/runner"
 )
 
+// LoginState represents the login state of an Instance.
 type LoginState int
 
 const (
+	// Loggedout is the state of a logged out instance.
 	Loggedout LoginState = iota
-	Loggedin             = iota
+	// Loggedin is the state of a logged in instance.
+	Loggedin = iota
 )
 
-type WhappInstance struct {
+// Instance is an instance to Whatsapp Web.
+type Instance struct {
 	LoginState LoginState
 
 	cdp      *chromedp.CDP
 	injected bool
 }
 
-func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, error) {
+// MakeInstance makes a new Instance.
+func MakeInstance(ctx context.Context, chromePath string) (*Instance, error) {
 	options := chromedp.WithRunnerOptions(
 		runner.Path(chromePath),
 		runner.Port(9222),
@@ -45,7 +50,7 @@ func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, 
 		return nil, err
 	}
 
-	return &WhappInstance{
+	return &Instance{
 		LoginState: Loggedout,
 
 		cdp:      cdp,
@@ -53,12 +58,13 @@ func MakeWhappInstance(ctx context.Context, chromePath string) (*WhappInstance, 
 	}, nil
 }
 
-func (wi *WhappInstance) Open(ctx context.Context) (LoginState, error) {
+// Open opens a tab with Whatsapp Web and returns the current login state.
+func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	var state LoginState
 	var loggedIn bool
 
 	err := wi.cdp.Run(ctx, chromedp.Tasks{
-		chromedp.Navigate(URL),
+		chromedp.Navigate(url),
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
 	})
@@ -76,7 +82,10 @@ func (wi *WhappInstance) Open(ctx context.Context) (LoginState, error) {
 	return state, nil
 }
 
-func (wi *WhappInstance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
+// GetLocalStorage retrieves and returns the localstorage of the current
+// instance on the current tab.
+// This method expects you to already have Whatsapp Web open.
+func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
 	var str string
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
@@ -93,10 +102,12 @@ func (wi *WhappInstance) GetLocalStorage(ctx context.Context) (map[string]string
 	return res, err
 }
 
-func (wi *WhappInstance) SetLocalStorage(ctx context.Context, localStorage map[string]string) error {
+// SetLocalStorage adds all keys given by `localStorage` to the localStorage of
+// the current instance.
+func (wi *Instance) SetLocalStorage(ctx context.Context, localStorage map[string]string) error {
 	var idc []byte
 
-	tasks := chromedp.Tasks{chromedp.Navigate(URL)}
+	tasks := chromedp.Tasks{chromedp.Navigate(url)}
 
 	for key, val := range localStorage {
 		str := fmt.Sprintf("localStorage.setItem(%s, %s)", strconv.Quote(key), strconv.Quote(val))
@@ -106,8 +117,15 @@ func (wi *WhappInstance) SetLocalStorage(ctx context.Context, localStorage map[s
 	return wi.cdp.Run(ctx, tasks)
 }
 
-func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
+// GetLoginCode retrieves the login code for the current instance.
+// This can be used to generate a QR code which can be scanned using the
+// Whatsapp mobile app.
+func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 	// REVIEW: check if not loggedin?
+
+	if wi.LoginState == Loggedin {
+		return "", fmt.Errorf("logged in")
+	}
 
 	var code string
 	var ok bool
@@ -127,7 +145,9 @@ func (wi *WhappInstance) GetLoginCode(ctx context.Context) (string, error) {
 	return code, nil
 }
 
-func (wi *WhappInstance) WaitLogin(ctx context.Context) error {
+// WaitLogin waits until the current instance has been done logging in. (the
+// user scanned the QR code and is accepted)
+func (wi *Instance) WaitLogin(ctx context.Context) error {
 	err := wi.cdp.Run(ctx, chromedp.WaitVisible("._3ZW2E"))
 	if err != nil {
 		panic(err)
@@ -136,7 +156,8 @@ func (wi *WhappInstance) WaitLogin(ctx context.Context) error {
 	return nil
 }
 
-func (wi *WhappInstance) GetMe(ctx context.Context) (Me, error) {
+// GetMe returns the Me object for the current instance.
+func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 	var res Me
 
 	if wi.LoginState != Loggedin {
@@ -151,13 +172,15 @@ func (wi *WhappInstance) GetMe(ctx context.Context) (Me, error) {
 	return res, nil
 }
 
-func (wi *WhappInstance) getLoggedIn(ctx context.Context) (bool, error) {
+func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
 	var res bool
 	action := chromedp.Evaluate("Store.Conn.clientToken != null", &res)
 	return res, wi.cdp.Run(ctx, action)
 }
 
-func (wi *WhappInstance) ListenLoggedIn(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
+// ListenLoggedIn listens for login state changes by polling it every
+// `interval`.
+func (wi *Instance) ListenLoggedIn(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
 	// TODO: we could make this nicer with waiting on divs
 
 	errCh := make(chan error)
@@ -196,13 +219,7 @@ func (wi *WhappInstance) ListenLoggedIn(ctx context.Context, interval time.Durat
 	return resCh, errCh
 }
 
-/*
-func (wi *WhappInstance) ListenConnectionState(ctx context.Context, stateCh chan ConnectionState) error {
-
-}
-*/
-
-func (wi *WhappInstance) inject(ctx context.Context) error {
+func (wi *Instance) inject(ctx context.Context) error {
 	if wi.injected {
 		return nil
 	}
@@ -423,7 +440,7 @@ func (wi *WhappInstance) inject(ctx context.Context) error {
 	return nil
 }
 
-func (wi *WhappInstance) getNewMessages(ctx context.Context) ([]Message, error) {
+func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 	var res []Message
 
 	if wi.LoginState != Loggedin {
@@ -446,7 +463,8 @@ func (wi *WhappInstance) getNewMessages(ctx context.Context) ([]Message, error) 
 	return res, err
 }
 
-func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Duration) (<-chan Message, <-chan error) {
+// ListenForMessages listens for new messages by polling every `interval`.
+func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duration) (<-chan Message, <-chan error) {
 	// REVIEW: is this still correct when we get logged out?
 
 	errCh := make(chan error)
@@ -484,7 +502,9 @@ func (wi *WhappInstance) ListenForMessages(ctx context.Context, interval time.Du
 	return messageCh, errCh
 }
 
-func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {
+// SendMessageToChatID sends the given `message` to the chat with the given
+// `chatID`.
+func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {
 	// REVIEW: make this safe.
 	// REVIEW: find some better way than 'idc'
 
@@ -502,7 +522,9 @@ func (wi *WhappInstance) SendMessageToChatID(ctx context.Context, chatID string,
 	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc))
 }
 
-func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]Chat, error) {
+// GetAllChats returns a slice containing all the chats the user has
+// participated in.
+func (wi *Instance) GetAllChats(ctx context.Context) ([]Chat, error) {
 	var res []Chat
 
 	if wi.LoginState != Loggedin {
@@ -521,7 +543,8 @@ func (wi *WhappInstance) GetAllChats(ctx context.Context) ([]Chat, error) {
 	return res, nil
 }
 
-func (wi *WhappInstance) Shutdown(ctx context.Context) error {
+// Shutdown shuts down the current Instance.
+func (wi *Instance) Shutdown(ctx context.Context) error {
 	if err := wi.cdp.Shutdown(ctx); err != nil {
 		return err
 	}

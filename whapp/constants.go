@@ -1,6 +1,6 @@
 package whapp
 
-const URL = "https://web.whatsapp.com"
+const url = "https://web.whatsapp.com"
 
 var cryptKeys = map[string]string{
 	"image":    "576861747341707020496d616765204b657973",
@@ -10,7 +10,7 @@ var cryptKeys = map[string]string{
 	"document": "576861747341707020446f63756d656e74204b657973",
 }
 
-func GetCryptKey(typ string) string {
+func getCryptKey(typ string) string {
 	if res, found := cryptKeys[typ]; found {
 		return res
 	}
