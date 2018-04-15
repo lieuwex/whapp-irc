@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -15,6 +16,10 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
+
+func logMessage(from, to, message string) {
+	log.Printf("%s->%s: %s", from, to, message)
+}
 
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
@@ -149,7 +154,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				to := msg.Params[0]
 				msg := msg.Params[1]
 
-				fmt.Printf("%s->%s: %s\n", conn.nickname, to, msg)
+				logMessage(conn.nickname, to, msg)
 
 				if to == "status" {
 					continue
@@ -315,7 +320,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			for _, line := range strings.Split(message, "\n") {
-				fmt.Printf("%s->%s: %s\n", senderSafeName, to, line)
+				logMessage(senderSafeName, to, line)
 				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
@@ -378,7 +383,7 @@ func (conn *Connection) writeIRC(msg string) error {
 }
 
 func (conn *Connection) status(msg string) error {
-	fmt.Printf("status->%s: %s\n", conn.nickname, msg)
+	logMessage("status", conn.nickname, msg)
 	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
 }
 
