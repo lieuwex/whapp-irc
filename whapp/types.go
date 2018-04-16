@@ -23,7 +23,7 @@ type PhoneInfo struct {
 	OsBuildNumber      string `json:"os_build_number"`
 }
 
-// Me contains info about the user logged in.
+// Me contains info about the user logged in and their phone.
 type Me struct {
 	LoginCode         string    `json:"ref"`
 	LoginCodeTTL      int       `json:"refTTL"`
@@ -68,7 +68,7 @@ type Contact struct {
 // matching name possible.
 // When the contact doesn't have a name in the user's contacts, this function
 // will try to use the PushName, if the contact has one.
-func (c *Contact) GetName() string {
+func (c Contact) GetName() string {
 	// REVIEW: better name
 
 	str := c.FormattedName
@@ -173,7 +173,7 @@ type Message struct {
 }
 
 // DownloadMedia downloads the media included in this message, if any
-func (msg *Message) DownloadMedia() ([]byte, error) {
+func (msg Message) DownloadMedia() ([]byte, error) {
 	// TODO
 
 	if !msg.IsMMS {
@@ -191,7 +191,7 @@ func (msg *Message) DownloadMedia() ([]byte, error) {
 
 // FormatBody returns the body of the current message, with mentions correctly
 // resolved.
-func (msg *Message) FormatBody(participants []Participant) string {
+func (msg Message) FormatBody(participants []Participant) string {
 	res := msg.Body
 
 	if !msg.Chat.IsGroupChat {
@@ -218,7 +218,7 @@ func (msg *Message) FormatBody(participants []Participant) string {
 
 // Content returns the body of the current message, with mentions correctly
 // resolved with support for files (just prints "-- file --") and their captions.
-func (msg *Message) Content(participants []Participant) string {
+func (msg Message) Content(participants []Participant) string {
 	res := msg.FormatBody(participants)
 
 	if msg.IsMMS {
@@ -234,7 +234,7 @@ func (msg *Message) Content(participants []Participant) string {
 
 // Time returns the timestamp of the current message converted to a time.Time
 // instance.
-func (msg *Message) Time() time.Time {
+func (msg Message) Time() time.Time {
 	return time.Unix(msg.Timestamp, 0)
 }
 
@@ -253,7 +253,7 @@ type Presence struct {
 
 // Time returns the timestamp of the current presence converted to a time.Time
 // instance.
-func (p *Presence) Time() time.Time {
+func (p Presence) Time() time.Time {
 	return time.Unix(p.Timestamp, 0)
 }
 
@@ -280,7 +280,7 @@ type Chat struct {
 
 // Title returns the name of the current chat, with support for contacts without
 // a name.
-func (c *Chat) Title() string {
+func (c Chat) Title() string {
 	res := c.Name
 	if res == "" && !c.IsGroupChat {
 		res = c.Contact.GetName()
@@ -290,7 +290,7 @@ func (c *Chat) Title() string {
 
 // Participants retrieves and returns a slice containing all participants of the
 // current group chat.
-func (c *Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, error) {
+func (c Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, error) {
 	var res []Participant
 
 	if !c.IsGroupChat {
@@ -316,7 +316,7 @@ func (c *Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, e
 }
 
 // GetPresence retrieves and returns the presence of the current private chat.
-func (c *Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
+func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 	// TODO REVIEW
 
 	var res Presence
