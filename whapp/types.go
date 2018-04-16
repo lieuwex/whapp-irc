@@ -298,7 +298,7 @@ func (c Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, er
 	}
 
 	if wi.LoginState != Loggedin {
-		return res, fmt.Errorf("not logged in")
+		return res, ErrLoggedOut
 	}
 
 	if err := wi.inject(ctx); err != nil {
@@ -322,7 +322,7 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 	var res Presence
 
 	if wi.LoginState != Loggedin {
-		return res, fmt.Errorf("not logged in")
+		return res, ErrLoggedOut
 	}
 
 	if err := wi.inject(ctx); err != nil {

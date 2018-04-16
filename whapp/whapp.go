@@ -124,7 +124,7 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 	// REVIEW: check if not loggedin?
 
 	if wi.LoginState == Loggedin {
-		return "", fmt.Errorf("logged in")
+		return "", ErrLoggedIn
 	}
 
 	var code string
@@ -139,7 +139,7 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 	}
 
 	if !ok {
-		return "", fmt.Errorf("not ok")
+		return "", ErrCDPUnknown
 	}
 
 	return code, nil
@@ -161,7 +161,7 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 	var res Me
 
 	if wi.LoginState != Loggedin {
-		return res, fmt.Errorf("not logged in")
+		return res, ErrLoggedOut
 	}
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
@@ -444,7 +444,7 @@ func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 	var res []Message
 
 	if wi.LoginState != Loggedin {
-		return res, fmt.Errorf("not logged in")
+		return res, ErrLoggedOut
 	}
 
 	if err := wi.inject(ctx); err != nil {
@@ -509,7 +509,7 @@ func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID string, mess
 	// REVIEW: find some better way than 'idc'
 
 	if wi.LoginState != Loggedin {
-		return fmt.Errorf("not logged in")
+		return ErrLoggedOut
 	}
 
 	if err := wi.inject(ctx); err != nil {
@@ -528,7 +528,7 @@ func (wi *Instance) GetAllChats(ctx context.Context) ([]Chat, error) {
 	var res []Chat
 
 	if wi.LoginState != Loggedin {
-		return res, fmt.Errorf("not logged in")
+		return res, ErrLoggedOut
 	}
 
 	if err := wi.inject(ctx); err != nil {
