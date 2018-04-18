@@ -121,8 +121,6 @@ func (wi *Instance) SetLocalStorage(ctx context.Context, localStorage map[string
 // This can be used to generate a QR code which can be scanned using the
 // Whatsapp mobile app.
 func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
-	// REVIEW: check if not loggedin?
-
 	if wi.LoginState == Loggedin {
 		return "", ErrLoggedIn
 	}
