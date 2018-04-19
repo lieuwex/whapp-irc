@@ -12,6 +12,25 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+func resolveMentionsInString(body string, mentionedIDs []string, participants []Participant) string {
+	for _, id := range mentionedIDs {
+		for _, c := range participants {
+			if c.ID == id {
+				number := id[:strings.IndexByte(id, '@')]
+
+				oldMention := "@" + number
+				newMention := "@" + c.Contact.GetName()
+
+				body = strings.Replace(body, oldMention, newMention, -1)
+
+				break
+			}
+		}
+	}
+
+	return body
+}
+
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 
 // PhoneInfo contains info about the connected phone.
@@ -192,44 +211,35 @@ func (msg Message) DownloadMedia() ([]byte, error) {
 // FormatBody returns the body of the current message, with mentions correctly
 // resolved.
 func (msg Message) FormatBody(participants []Participant) string {
-	res := msg.Body
-
 	if !msg.Chat.IsGroupChat {
-		return res
+		return msg.Body
 	}
+	return resolveMentionsInString(msg.Body, msg.MentionedIDs, participants)
+}
 
-	for _, id := range msg.MentionedIDs {
-		for _, c := range participants {
-			if c.ID == id {
-				number := id[:strings.IndexByte(id, '@')]
-
-				oldMention := "@" + number
-				newMention := "@" + c.Contact.GetName()
-
-				res = strings.Replace(res, oldMention, newMention, -1)
-
-				break
-			}
-		}
+// FormatCaption returns the body of the current message, with mentions
+// correctly resolved.
+func (msg Message) FormatCaption(participants []Participant) string {
+	if !msg.Chat.IsGroupChat {
+		return msg.Caption
 	}
-
-	return res
+	return resolveMentionsInString(msg.Caption, msg.MentionedIDs, participants)
 }
 
 // Content returns the body of the current message, with mentions correctly
 // resolved with support for files (just prints "-- file --") and their captions.
 func (msg Message) Content(participants []Participant) string {
-	res := msg.FormatBody(participants)
-
 	if msg.IsMMS {
-		res = "-- file --"
+		res := "-- file --"
 
 		if msg.Caption != "" {
-			res += " " + msg.Caption
+			res += " " + msg.FormatCaption(participants)
 		}
+
+		return res
 	}
 
-	return res
+	return msg.FormatBody(participants)
 }
 
 // Time returns the timestamp of the current message converted to a time.Time
