@@ -60,8 +60,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	write := conn.writeIRC
 	status := conn.status
 
-	ircCh := make(chan *irc.Message)
-
 	closed := false
 	closeWaitCh := func() {
 		if !closed {
@@ -73,7 +71,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	// listen for and parse messages.
 	// we want to do this outside the next irc message handle loop, so we can
 	// reply to PINGs but not handle stuff like JOINs yet.
+	ircCh := make(chan *irc.Message)
 	go func() {
+		defer close(ircCh)
+
 		decoder := irc.NewDecoder(bufio.NewReader(socket))
 		for {
 			msg, err := decoder.Decode()
