@@ -547,22 +547,22 @@ func getMessageBody(msg *whapp.Message, participants []Participant) string {
 		whappParticipants[i] = whapp.Participant(p)
 	}
 
-	res := msg.FormatBody(whappParticipants)
-
 	if msg.Longitude != 0 || msg.Latitude != 0 {
-		res = fmt.Sprintf("https://maps.google.com/?q=%f,%f", msg.Latitude, msg.Longitude)
+		return fmt.Sprintf("https://maps.google.com/?q=%f,%f", msg.Latitude, msg.Longitude)
 	} else if msg.IsMMS {
-		res = "-- file --"
-		if f := fs.HashToPath[msg.MediaFileHash]; f != nil {
+		res := "-- file --"
+		if f, has := fs.HashToPath[msg.MediaFileHash]; has {
 			res = f.URL
 		}
 
 		if msg.Caption != "" {
-			res += " " + msg.Caption
+			res += " " + msg.FormatCaption(whappParticipants)
 		}
+
+		return res
 	}
 
-	return res
+	return msg.FormatBody(whappParticipants)
 }
 
 func formatContact(contact whapp.Contact, isAdmin bool) Participant {
