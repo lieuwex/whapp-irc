@@ -15,6 +15,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
+	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
 func logMessage(from, to, message string) {
@@ -153,9 +154,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case "PRIVMSG":
 				to := msg.Params[0]
-				msg := msg.Params[1]
+				body := msg.Params[1]
 
-				logMessage(conn.nickname, to, msg)
+				if tag, text, ok := ctcp.Decode(msg.Trailing()); ok && tag == ctcp.ACTION {
+					body = fmt.Sprintf("_%s_", text)
+				}
+
+				logMessage(conn.nickname, to, body)
 
 				if to == "status" {
 					continue
@@ -168,7 +173,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				}
 
 				cid := chat.ID
-				err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, msg)
+				err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, body)
 				if err != nil {
 					fmt.Printf("err while sending %s\n", err.Error())
 				}

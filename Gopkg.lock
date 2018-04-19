@@ -154,6 +154,7 @@
   name = "gopkg.in/sorcix/irc.v2"
   packages = [
     ".",
+    "ctcp",
     "internal"
   ]
   revision = "1b25be7f891d1bd0190ac0ef159da153c9ffa22a"
@@ -161,6 +162,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c46d1ac6a64dcd73dde173386570ceb0eba989d2dab77ffcefc24a644b126b7f"
+  inputs-digest = "1ed208d5421351cc71ca0e8a2f983bcf1e7756ce7f4bfc8b60e1e0c31e0eb7c2"
   solver-name = "gps-cdcl"
   solver-version = 1
