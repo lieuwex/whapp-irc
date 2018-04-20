@@ -317,14 +317,15 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 			}
-			message := getMessageBody(&msg, chat.Participants)
 
 			if msg.QuotedMessageObject != nil {
-				line := "> " + strings.SplitN(getMessageBody(msg.QuotedMessageObject, chat.Participants), "\n", 2)[0]
+				message := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
+				line := "> " + strings.SplitN(message, "\n", 2)[0]
 				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 				write(str)
 			}
 
+			message := getMessageBody(msg, chat.Participants, conn.me)
 			for _, line := range strings.Split(message, "\n") {
 				logMessage(senderSafeName, to, line)
 				str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
@@ -546,7 +547,7 @@ func (conn *Connection) setup() error {
 	return nil
 }
 
-func getMessageBody(msg *whapp.Message, participants []Participant) string {
+func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) string {
 	whappParticipants := make([]whapp.Participant, len(participants))
 	for i, p := range participants {
 		whappParticipants[i] = whapp.Participant(p)
@@ -561,13 +562,13 @@ func getMessageBody(msg *whapp.Message, participants []Participant) string {
 		}
 
 		if msg.Caption != "" {
-			res += " " + msg.FormatCaption(whappParticipants)
+			res += " " + msg.FormatCaption(whappParticipants, me.Pushname)
 		}
 
 		return res
 	}
 
-	return msg.FormatBody(whappParticipants)
+	return msg.FormatBody(whappParticipants, me.Pushname)
 }
 
 func formatContact(contact whapp.Contact, isAdmin bool) Participant {

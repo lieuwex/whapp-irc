@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func resolveMentionsInString(body string, mentionedIDs []string, participants []Participant) string {
+func resolveMentionsInString(body string, mentionedIDs []string, participants []Participant, ownName string) string {
 	for _, id := range mentionedIDs {
 		for _, c := range participants {
 			if c.ID == id {
@@ -20,6 +20,9 @@ func resolveMentionsInString(body string, mentionedIDs []string, participants []
 
 				oldMention := "@" + number
 				newMention := "@" + c.Contact.GetName()
+				if c.Contact.IsMe {
+					newMention = "@" + ownName
+				}
 
 				body = strings.Replace(body, oldMention, newMention, -1)
 
@@ -210,36 +213,36 @@ func (msg Message) DownloadMedia() ([]byte, error) {
 
 // FormatBody returns the body of the current message, with mentions correctly
 // resolved.
-func (msg Message) FormatBody(participants []Participant) string {
+func (msg Message) FormatBody(participants []Participant, ownName string) string {
 	if !msg.Chat.IsGroupChat {
 		return msg.Body
 	}
-	return resolveMentionsInString(msg.Body, msg.MentionedIDs, participants)
+	return resolveMentionsInString(msg.Body, msg.MentionedIDs, participants, ownName)
 }
 
 // FormatCaption returns the body of the current message, with mentions
 // correctly resolved.
-func (msg Message) FormatCaption(participants []Participant) string {
+func (msg Message) FormatCaption(participants []Participant, ownName string) string {
 	if !msg.Chat.IsGroupChat {
 		return msg.Caption
 	}
-	return resolveMentionsInString(msg.Caption, msg.MentionedIDs, participants)
+	return resolveMentionsInString(msg.Caption, msg.MentionedIDs, participants, ownName)
 }
 
 // Content returns the body of the current message, with mentions correctly
 // resolved with support for files (just prints "-- file --") and their captions.
-func (msg Message) Content(participants []Participant) string {
+func (msg Message) Content(participants []Participant, ownName string) string {
 	if msg.IsMMS {
 		res := "-- file --"
 
 		if msg.Caption != "" {
-			res += " " + msg.FormatCaption(participants)
+			res += " " + msg.FormatCaption(participants, ownName)
 		}
 
 		return res
 	}
 
-	return msg.FormatBody(participants)
+	return msg.FormatBody(participants, ownName)
 }
 
 // Time returns the timestamp of the current message converted to a time.Time
