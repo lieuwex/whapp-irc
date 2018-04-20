@@ -199,6 +199,39 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				// TODO: some way that we don't rejoin a person later.
 				chat.Joined = false
 
+			case "MODE":
+				if len(msg.Params) != 3 {
+					continue
+				}
+
+				ident := msg.Params[0]
+				mode := msg.Params[1]
+				nick := strings.ToLower(msg.Params[2])
+
+				chat := conn.GetChatByIdentifier(ident)
+				if chat == nil {
+					status("chat not found")
+					continue
+				} else if mode != "+o" {
+					continue
+				}
+
+				for _, p := range chat.Participants {
+					if strings.ToLower(p.SafeName()) == nick {
+						err := chat.rawChat.SetAdmin(conn.bridge.ctx, conn.bridge.WI, p.ID, true)
+						if err != nil {
+							str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
+							status(str)
+							fmt.Println(str)
+							break
+						}
+
+						write(fmt.Sprintf(":%s MODE %s +o %s", conn.nickname, ident, nick))
+
+						break
+					}
+				}
+
 			case "LIST":
 				// TODO: support args
 				for _, c := range conn.Chats {

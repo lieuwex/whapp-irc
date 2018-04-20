@@ -351,3 +351,24 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 
 	return res, nil
 }
+
+func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmin bool) error {
+	if wi.LoginState != Loggedin {
+		return ErrLoggedOut
+	}
+
+	if err := wi.inject(ctx); err != nil {
+		return err
+	}
+
+	var fun string
+	if setAdmin {
+		fun = "promoteParticipant"
+	} else {
+		fun = "demoteParticipant"
+	}
+	str := fmt.Sprintf("Store.Wap.%s(%s, %s)", fun, strconv.Quote(c.ID), strconv.Quote(userID))
+
+	var idc []byte
+	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc, awaitPromise))
+}
