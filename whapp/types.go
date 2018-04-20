@@ -292,7 +292,7 @@ type Chat struct {
 // a name.
 func (c Chat) Title() string {
 	res := c.Name
-	if res == "" && !c.IsGroupChat {
+	if res == "" {
 		res = c.Contact.GetName()
 	}
 	return res
