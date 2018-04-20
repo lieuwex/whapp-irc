@@ -230,10 +230,10 @@ func (msg Message) FormatCaption(participants []Participant, ownName string) str
 }
 
 // Content returns the body of the current message, with mentions correctly
-// resolved with support for files (just prints "-- file --") and their captions.
+// resolved with support for files (just prints "--file--") and their captions.
 func (msg Message) Content(participants []Participant, ownName string) string {
 	if msg.IsMMS {
-		res := "-- file --"
+		res := "--file--"
 
 		if msg.Caption != "" {
 			res += " " + msg.FormatCaption(participants, ownName)

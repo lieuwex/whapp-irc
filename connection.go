@@ -589,7 +589,7 @@ func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) 
 	if msg.Longitude != 0 || msg.Latitude != 0 {
 		return fmt.Sprintf("https://maps.google.com/?q=%f,%f", msg.Latitude, msg.Longitude)
 	} else if msg.IsMMS {
-		res := "-- file --"
+		res := "--file--"
 		if f, has := fs.HashToPath[msg.MediaFileHash]; has {
 			res = f.URL
 		}
