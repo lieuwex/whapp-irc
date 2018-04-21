@@ -3,7 +3,6 @@ package whapp
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -196,19 +195,16 @@ type Message struct {
 
 // DownloadMedia downloads the media included in this message, if any
 func (msg Message) DownloadMedia() ([]byte, error) {
-	// TODO
-
 	if !msg.IsMMS {
-		return make([]byte, 0), nil
+		return []byte{}, nil
 	}
 
-	return exec.Command(
-		"python3",
-		"./download.py",
-		msg.MediaClientURL,
-		msg.MediaKey,
-		getCryptKey(msg.MediaType),
-	).Output()
+	fileBytes, err := downloadFile(msg.MediaClientURL)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return decryptFile(fileBytes, msg.MediaKey, getCryptKey(msg.MediaType))
 }
 
 // FormatBody returns the body of the current message, with mentions correctly

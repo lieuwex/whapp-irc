@@ -132,6 +132,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["hkdf"]
+  revision = "e73bf333ef8920dbb52ad18d4bd38ad9d9bc76d7"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/image"
   packages = [
     "bmp",
@@ -162,6 +168,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1ed208d5421351cc71ca0e8a2f983bcf1e7756ce7f4bfc8b60e1e0c31e0eb7c2"
+  inputs-digest = "01ee7a093bcd93bb7f31767eb05d27f1446b6a5d535fac2b2df11997a0c4f3e7"
   solver-name = "gps-cdcl"
   solver-version = 1
