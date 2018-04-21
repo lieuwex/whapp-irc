@@ -140,6 +140,17 @@ type MediaData struct {
 	// Streamable  bool         `json:"streamable"`
 }
 
+// LocationData contains information specific to a location message.
+type LocationData struct {
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+	InfoString string  `json:"string"`
+}
+
+func (loc LocationData) String() string {
+	return loc.InfoString
+}
+
 // Message represents any kind of message on Whatsapp.
 // This also means the stuff like notifications (in the sense of e2e
 // notifications, for example) are also represented by this struct.
@@ -182,9 +193,7 @@ type Message struct {
 	MediaFilename  string    `json:"filename"`
 	Caption        string    `json:"caption"`
 
-	Latitude       float64 `json:"lat"`
-	Longitude      float64 `json:"lng"`
-	LocationString string  `json:"loc"`
+	Location *LocationData `json:"location"`
 
 	PDFPageCount uint `json:"pageCount"`
 

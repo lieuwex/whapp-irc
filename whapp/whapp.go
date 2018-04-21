@@ -277,6 +277,14 @@ func (wi *Instance) inject(ctx context.Context) error {
 		res.quotedMsgObj = whappGo.msgToJSON(msg.quotedMsgObj());
 		res.mediaData = msg.mediaData && msg.mediaData.toJSON();
 
+		if (res.lat != 0 || res.lng != 0) {
+			res.location = {
+				latitude: res.lat,
+				longitude: res.lng,
+				string: res.loc,
+			};
+		}
+
 		return res;
 	};
 
