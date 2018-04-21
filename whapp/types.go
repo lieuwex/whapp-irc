@@ -357,6 +357,8 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 	return res, nil
 }
 
+// SetAdmin sets the admin state of the user with given userID in the current
+// chat.
 func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmin bool) error {
 	if wi.LoginState != Loggedin {
 		return ErrLoggedOut
