@@ -427,6 +427,10 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 		return whappGo.presenceToJSON(res);
 	}
+
+	whappGo.getPhoneActive = function () {
+		return Store.Stream.phoneActive;
+	};
 	`
 
 	var idc []byte
@@ -539,6 +543,66 @@ func (wi *Instance) GetAllChats(ctx context.Context) ([]Chat, error) {
 	}
 
 	return res, nil
+}
+
+// GetPhoneActive returns Whether or not the user's phone is active.
+func (wi *Instance) GetPhoneActive(ctx context.Context) (bool, error) {
+	var res bool
+
+	if wi.LoginState != Loggedin {
+		return res, ErrLoggedOut
+	}
+
+	if err := wi.inject(ctx); err != nil {
+		return res, err
+	}
+
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getPhoneActive()", &res))
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+// ListenForPhoneActiveChange listens for changes in the user's phone
+// activity.
+func (wi *Instance) ListenForPhoneActiveChange(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
+	// REVIEW: is this still correct when we get logged out?
+
+	errCh := make(chan error)
+	resCh := make(chan bool)
+
+	go func() {
+		defer close(errCh)
+		defer close(resCh)
+
+		prev := false
+		new := true
+
+		for {
+			if err := ctx.Err(); err != nil {
+				errCh <- err
+				return
+			}
+
+			res, err := wi.GetPhoneActive(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			if new || res != prev {
+				prev = res
+				new = false
+				resCh <- res
+			}
+
+			time.Sleep(interval)
+		}
+	}()
+
+	return resCh, errCh
 }
 
 // Shutdown shuts down the current Instance.
