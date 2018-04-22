@@ -420,19 +420,8 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getPresence = async function (chatId) {
-		const res = Store.Presence.models.find(p => p.id === id);
-
-		// TODO: user should be able to just get the stale one and call
-		// .Update() in the go code.
-		if (res != null && res.stale) {
-			try {
-				await res.update();
-			} catch (e) {
-				console.error(e);
-				return null;
-			}
-		}
-
+		const res = Store.Presence.models.find(p => p.id === chatId);
+		await res.update();
 		return whappGo.presenceToJSON(res);
 	}
 

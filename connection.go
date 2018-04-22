@@ -243,6 +243,31 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					write(fmt.Sprintf(":whapp-irc 322 %s %s %d :%s", conn.nickname, c.Identifier(), nParticipants, c.Name))
 				}
 				write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.nickname))
+
+			case "WHO":
+				identifier := msg.Params[0]
+				chat := conn.GetChatByIdentifier(identifier)
+				if chat != nil && chat.IsGroupChat {
+					for _, p := range chat.Participants {
+						presenceStamp := "H"
+						presence, found, err := conn.getPresenceByUserID(p.ID)
+						if found && err == nil && !presence.IsOnline {
+							presenceStamp = "G"
+						}
+
+						msg := fmt.Sprintf(
+							":whapp-irc 352 %s %s %s whapp-irc whapp-irc %s %s :0 %s",
+							conn.nickname,
+							identifier,
+							p.SafeName(),
+							p.SafeName(),
+							presenceStamp,
+							p.FullName(),
+						)
+						write(msg)
+					}
+				}
+				write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
 			}
 		}
 	}()
@@ -622,4 +647,15 @@ func formatContact(contact whapp.Contact, isAdmin bool) Participant {
 func formatPrivateMessage(date time.Time, from, to, line string) string {
 	dateFormat := date.UTC().Format("2006-01-02T15:04:05.000Z")
 	return fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", dateFormat, from, to, line)
+}
+
+func (conn *Connection) getPresenceByUserID(userID string) (presence whapp.Presence, found bool, err error) {
+	for _, c := range conn.Chats {
+		if c.ID == userID {
+			presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)
+			return presence, true, err
+		}
+	}
+
+	return whapp.Presence{}, false, nil
 }
