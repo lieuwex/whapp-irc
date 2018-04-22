@@ -46,7 +46,7 @@ func getExtensionByMime(typ string) (string, error) {
 }
 
 func getExtensionByMimeOrBytes(mime string, bytes []byte) string {
-	if res, err := getExtensionByMime(mime); res != "" && err != nil {
+	if res, err := getExtensionByMime(mime); res != "" && err == nil {
 		return res
 	}
 
