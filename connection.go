@@ -337,7 +337,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 				ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
 				if ext == "" {
-					ext = filepath.Ext(msg.MediaFilename)[1:]
+					ext = filepath.Ext(msg.MediaFilename)
+					if ext != "" {
+						ext = ext[1:]
+					}
 				}
 
 				_, err = fs.AddBlob(
