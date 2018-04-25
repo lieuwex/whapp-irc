@@ -268,6 +268,51 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					}
 				}
 				write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
+
+			case "KICK":
+				chatIdentifier := msg.Params[0]
+				nick := strings.ToLower(msg.Params[1])
+
+				chat := conn.GetChatByIdentifier(chatIdentifier)
+				if chat == nil || !chat.IsGroupChat {
+					write(fmt.Sprintf(":whapp-irc 403 %s %s :No such channel", conn.nickname, chatIdentifier))
+					continue
+				}
+
+				for _, p := range chat.Participants {
+					if strings.ToLower(p.SafeName()) == nick {
+						err := chat.rawChat.RemoveParticipant(conn.bridge.ctx, conn.bridge.WI, p.ID)
+						if err != nil {
+							str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
+							status(str)
+							fmt.Println(str)
+						}
+						break
+					}
+				}
+
+			case "INVITE":
+				nick := msg.Params[0]
+				chatIdentifier := msg.Params[1]
+
+				chat := conn.GetChatByIdentifier(chatIdentifier)
+				if chat == nil || !chat.IsGroupChat {
+					write(fmt.Sprintf(":whapp-irc 442 %s %s :You're not on that channel", conn.nickname, chatIdentifier))
+					continue
+				}
+				personChat := conn.GetChatByIdentifier(nick)
+				if personChat == nil || personChat.IsGroupChat {
+					write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, nick))
+					continue
+				}
+
+				err := chat.rawChat.AddParticipant(conn.bridge.ctx, conn.bridge.WI, personChat.ID)
+				if err != nil {
+					str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
+					status(str)
+					fmt.Println(str)
+					break
+				}
 			}
 		}
 	}()
