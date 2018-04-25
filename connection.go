@@ -249,6 +249,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				chat := conn.GetChatByIdentifier(identifier)
 				if chat != nil && chat.IsGroupChat {
 					for _, p := range chat.Participants {
+						if p.Contact.IsMe {
+							continue
+						}
+
 						presenceStamp := "H"
 						presence, found, err := conn.getPresenceByUserID(p.ID)
 						if found && err == nil && !presence.IsOnline {
