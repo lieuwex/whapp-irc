@@ -18,11 +18,11 @@ func (p *Participant) FullName() string {
 
 func (p *Participant) SafeName() string {
 	str := p.FullName()
-	if numberRegex.MatchString(str) && IRCsafeString(p.Contact.PushName) != "" {
+	if numberRegex.MatchString(str) && ircSafeString(p.Contact.PushName) != "" {
 		str = p.Contact.PushName
 	}
 
-	return IRCsafeString(str)
+	return ircSafeString(str)
 }
 
 type Chat struct {
@@ -39,7 +39,7 @@ type Chat struct {
 }
 
 func (c *Chat) SafeName() string {
-	return IRCsafeString(c.Name)
+	return ircSafeString(c.Name)
 }
 
 func (c *Chat) Identifier() string {

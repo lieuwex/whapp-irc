@@ -55,7 +55,7 @@ func getExtensionByMimeOrBytes(mime string, bytes []byte) string {
 
 var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
 
-func IRCsafeString(str string) string {
+func ircSafeString(str string) string {
 	str = unidecode.Unidecode(str)
 	return unsafeRegex.ReplaceAllLiteralString(str, "")
 }
