@@ -1,17 +1,17 @@
-package main
+package database
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 )
 
 type User struct {
-	Nickname     string            `json:"nickname"`
-	LocalStorage map[string]string `json:"localStorage"`
+	Nickname             string            `json:"nickname"`
+	LocalStorage         map[string]string `json:"localStorage"`
+	LastReceivedReceipts map[string]int64  `json:"lastReceivedReceipts"`
 }
 
 type Database struct {
@@ -31,15 +31,15 @@ func MakeDatabase(folder string) (*Database, error) {
 
 func (db *Database) GetItem(id string) (item interface{}, found bool, err error) {
 	if id == "" {
-		return nil, false, errors.New("id can't be empty")
+		return nil, false, ErrIDEmpty
 	}
 
-	dir, file := path.Split(id)
+	dir, file := filepath.Split(id)
 
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	bytes, err := ioutil.ReadFile(path.Join(db.Folder, dir, file+".json"))
+	bytes, err := ioutil.ReadFile(filepath.Join(db.Folder, dir, file+".json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, false, nil
@@ -59,10 +59,10 @@ func (db *Database) GetItem(id string) (item interface{}, found bool, err error)
 
 func (db *Database) SaveItem(id string, item interface{}) error {
 	if id == "" {
-		return errors.New("id can't be empty")
+		return ErrIDEmpty
 	}
 
-	dir, file := path.Split(id)
+	dir, file := filepath.Split(id)
 
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -72,5 +72,5 @@ func (db *Database) SaveItem(id string, item interface{}) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path.Join(db.Folder, dir, file+".json"), bytes, 0777)
+	return ioutil.WriteFile(filepath.Join(db.Folder, dir, file+".json"), bytes, 0777)
 }

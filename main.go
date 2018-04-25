@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"whapp-irc/database"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 )
 
 var fs *FileServer
-var userDb *Database
+var userDb *database.Database
 
 func handleSocket(socket *net.TCPConn) {
 	conn, err := MakeConnection()
@@ -42,7 +43,7 @@ func main() {
 
 	var err error
 
-	userDb, err = MakeDatabase("db/users")
+	userDb, err = database.MakeDatabase("db/users")
 	if err != nil {
 		panic(err)
 	}

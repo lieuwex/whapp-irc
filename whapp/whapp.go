@@ -276,6 +276,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		res.chatId = msg.id.remote;
 		res.quotedMsgObj = whappGo.msgToJSON(msg.quotedMsgObj());
 		res.mediaData = msg.mediaData && msg.mediaData.toJSON();
+		res.recipients = msg.recipients;
 
 		if (res.lat != null || res.lng != null) {
 			res.location = {
@@ -309,7 +310,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		}
 
 		return {
-			timestamp: presence.t,
+			timestamp: presence.chatstate && presence.chatstate.t,
 			type: presence.type,
 			id: presence.id,
 			chatActive: presence.chatActive,
@@ -428,6 +429,22 @@ func (wi *Instance) inject(ctx context.Context) error {
 	whappGo.getPhoneActive = function () {
 		return Store.Stream.phoneActive;
 	};
+
+	whappGo.getMessagesFromChatTillDate = async function (chatID, timestamp) {
+		const chat = Store.Chat.models.find(c => c.id === chatID);
+
+		while (
+			chat.msgs.models[0].t > timestamp &&
+			!chat.msgs.msgLoadState.noEarlierMsgs
+		) {
+			await chat.loadEarlierMsgs();
+		}
+
+		// TODO: optimize this
+		return chat.msgs.models
+			.filter(m => m.t >= timestamp)
+			.map(whappGo.msgToJSON);
+	};
 	`
 
 	var idc []byte
@@ -486,11 +503,6 @@ func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duratio
 			}
 
 			for _, msg := range res {
-				if msg.IsNotification {
-					// TODO
-					continue
-				}
-
 				messageCh <- msg
 			}
 

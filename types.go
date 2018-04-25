@@ -62,3 +62,12 @@ func (c *Chat) AddMessageID(id string) {
 	}
 	c.MessageIDs = append(c.MessageIDs, id)
 }
+
+func (c *Chat) HasMessageID(id string) bool {
+	for _, x := range c.MessageIDs {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}

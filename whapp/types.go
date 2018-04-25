@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -156,10 +157,9 @@ func (loc LocationData) String() string {
 // notifications, for example) are also represented by this struct.
 type Message struct {
 	ID         MessageID `json:"id"`
-	Subtype    string    `json:"subtype"`
 	Timestamp  int64     `json:"t"`
 	NotifyName string    `json:"notifyName"`
-	Sender     Contact   `json:"senderObj"`
+	Sender     *Contact  `json:"senderObj"`
 	From       string    `json:"from"`
 	To         string    `json:"to"`
 	Body       string    `json:"body"`
@@ -168,7 +168,10 @@ type Message struct {
 	Invis      bool      `json:"invis"`
 	Starred    bool      `json:"star"`
 
-	Recipients   []string `json:"recipients"`
+	Type    string `json:"type"`
+	Subtype string `json:"subtype"`
+
+	RecipientIDs []string `json:"recipients"`
 	MentionedIDs []string `json:"mentionedJidList"`
 
 	IsGIF          bool `json:"isGif"`
@@ -187,7 +190,6 @@ type Message struct {
 	MediaData      MediaData `json:"mediaData"`
 	MediaKey       string    `json:"mediaKey"` // make this nicer
 	MimeType       string    `json:"mimetype"`
-	MediaType      string    `json:"type"` // TODO: use this
 	MediaClientURL string    `json:"clientUrl"`
 	MediaFileHash  string    `json:"filehash"`
 	MediaFilename  string    `json:"filename"`
@@ -213,7 +215,7 @@ func (msg Message) DownloadMedia() ([]byte, error) {
 		return []byte{}, err
 	}
 
-	return decryptFile(fileBytes, msg.MediaKey, getCryptKey(msg.MediaType))
+	return decryptFile(fileBytes, msg.MediaKey, getCryptKey(msg.Type))
 }
 
 // FormatBody returns the body of the current message, with mentions correctly
@@ -360,22 +362,51 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 // SetAdmin sets the admin state of the user with given userID in the current
 // chat.
 func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmin bool) error {
-	if wi.LoginState != Loggedin {
-		return ErrLoggedOut
-	}
-
-	if err := wi.inject(ctx); err != nil {
-		return err
-	}
-
 	var fun string
 	if setAdmin {
 		fun = "promoteParticipant"
 	} else {
 		fun = "demoteParticipant"
 	}
-	str := fmt.Sprintf("Store.Wap.%s(%s, %s)", fun, strconv.Quote(c.ID), strconv.Quote(userID))
 
-	var idc []byte
-	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc, awaitPromise))
+	str := fmt.Sprintf("Store.Wap.%s(%s, %s)", fun, strconv.Quote(c.ID), strconv.Quote(userID))
+	return runLoggedinWithoutRes(ctx, wi, str)
+}
+
+// AddParticipant adds the user with the given userID to the current chat.
+func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID string) error {
+	str := fmt.Sprintf("Store.Wap.addParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
+	return runLoggedinWithoutRes(ctx, wi, str)
+}
+
+// RemoveParticipant removes the user with the given userID from the current
+// chat.
+func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID string) error {
+	str := fmt.Sprintf("Store.Wap.removeParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
+	return runLoggedinWithoutRes(ctx, wi, str)
+}
+
+func (c Chat) GetMessagesFromChatTillDate(ctx context.Context, wi *Instance, timestamp int64) ([]Message, error) {
+	var res []Message
+
+	if wi.LoginState != Loggedin {
+		return res, ErrLoggedOut
+	}
+
+	if err := wi.inject(ctx); err != nil {
+		return res, err
+	}
+
+	str := fmt.Sprintf("whappGo.getMessagesFromChatTillDate(%s, %d)", strconv.Quote(c.ID), timestamp)
+
+	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
+	if err != nil {
+		return res, err
+	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].Timestamp < res[j].Timestamp
+	})
+
+	return res, nil
 }
