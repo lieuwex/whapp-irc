@@ -65,9 +65,9 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	}
 	chat.AddMessageID(msg.ID.Serialized)
 
-	lastTimestamp, found := conn.lastMessageTimestampByChatIDs[chat.ID]
+	lastTimestamp, found := conn.timestampMap.Get(chat.ID)
 	if !found || msg.Timestamp > lastTimestamp {
-		conn.lastMessageTimestampByChatIDs[chat.ID] = msg.Timestamp
+		conn.timestampMap.Set(chat.ID, msg.Timestamp)
 		go conn.saveDatabaseEntry()
 	}
 

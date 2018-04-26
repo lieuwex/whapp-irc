@@ -37,9 +37,9 @@ type Connection struct {
 
 	waitch chan bool
 
-	lastMessageTimestampByChatIDs map[string]int64
-
 	localStorage map[string]string
+
+	timestampMap *TimestampMap
 }
 
 func MakeConnection() (*Connection, error) {
@@ -49,6 +49,8 @@ func MakeConnection() (*Connection, error) {
 		welcomeCh: make(chan bool),
 
 		waitch: make(chan bool),
+
+		timestampMap: MakeTimestampMap(),
 	}, nil
 }
 
@@ -145,20 +147,21 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 	<-conn.welcomeCh
 
-	m := conn.lastMessageTimestampByChatIDs
 	for _, c := range conn.Chats {
-		if _, found := m[c.ID]; !found {
-			m[c.ID] = c.rawChat.Timestamp
+		prevTimestamp, found := conn.timestampMap.Get(c.ID)
+
+		if !found {
+			conn.timestampMap.Set(c.ID, c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
-		} else if c.rawChat.Timestamp <= m[c.ID] {
+		} else if c.rawChat.Timestamp <= prevTimestamp {
 			continue
 		}
 
 		messages, err := c.rawChat.GetMessagesFromChatTillDate(
 			conn.bridge.ctx,
 			conn.bridge.WI,
-			m[c.ID],
+			prevTimestamp,
 		)
 		if err != nil {
 			fmt.Printf("error while loading earlier messages: %s\n", err.Error())
@@ -166,7 +169,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 
 		for _, msg := range messages {
-			if msg.Timestamp <= m[c.ID] {
+			if msg.Timestamp <= prevTimestamp {
 				continue
 			}
 
@@ -350,7 +353,7 @@ func (conn *Connection) setup() error {
 			panic(err)
 		}
 
-		conn.lastMessageTimestampByChatIDs = user.LastReceivedReceipts
+		conn.timestampMap.Swap(user.LastReceivedReceipts)
 
 		err := conn.bridge.WI.SetLocalStorage(conn.bridge.ctx, user.LocalStorage)
 		if err != nil {
@@ -392,12 +395,7 @@ func (conn *Connection) setup() error {
 	if err != nil {
 		fmt.Printf("error while getting local storage: %s\n", err.Error())
 	} else {
-		err := userDb.SaveItem(conn.nickname, database.User{
-			Nickname:             conn.nickname,
-			LocalStorage:         conn.localStorage,
-			LastReceivedReceipts: conn.lastMessageTimestampByChatIDs,
-		})
-		if err != nil {
+		if err := conn.saveDatabaseEntry(); err != nil {
 			return err
 		}
 	}
@@ -441,7 +439,7 @@ func (conn *Connection) saveDatabaseEntry() error {
 	err := userDb.SaveItem(conn.nickname, database.User{
 		Nickname:             conn.nickname,
 		LocalStorage:         conn.localStorage,
-		LastReceivedReceipts: conn.lastMessageTimestampByChatIDs,
+		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})
 	if err != nil {
 		logAtTime(time.Now(), "error while updating user entry: %s\n", err.Error())
