@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -19,8 +18,8 @@ import (
 	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
-func logMessage(from, to, message string) {
-	log.Printf("%s->%s: %s", from, to, message)
+func logMessage(time time.Time, from, to, message string) {
+	logAtTime(time, "%s->%s: %s", from, to, message)
 }
 
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
@@ -162,7 +161,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					body = fmt.Sprintf("_%s_", text)
 				}
 
-				logMessage(conn.nickname, to, body)
+				logMessage(time.Now(), conn.nickname, to, body)
 
 				if to == "status" {
 					continue
@@ -468,7 +467,7 @@ func (conn *Connection) writeIRC(msg string) error {
 }
 
 func (conn *Connection) status(msg string) error {
-	logMessage("status", conn.nickname, msg)
+	logMessage(time.Now(), "status", conn.nickname, msg)
 	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
 }
 
@@ -758,7 +757,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 
 	message := getMessageBody(msg, chat.Participants, conn.me)
 	for _, line := range strings.Split(message, "\n") {
-		logMessage(senderSafeName, to, line)
+		logMessage(msg.Time(), senderSafeName, to, line)
 		str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
 		conn.writeIRC(str)
 	}
@@ -843,7 +842,7 @@ func (conn *Connection) saveDatabaseEntry() error {
 		LastReceivedReceipts: conn.lastMessageTimestampByChatIDs,
 	})
 	if err != nil {
-		log.Printf"error while updating user entry: %s\n", err.Error())
+		logAtTime(time.Now(), "error while updating user entry: %s\n", err.Error())
 	}
 	return err
 }
