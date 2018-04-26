@@ -59,7 +59,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	defer conn.bridge.Stop()
 
 	conn.socket = socket
-	write := conn.writeIRC
+	write := conn.writeIRCNow
 	status := conn.status
 
 	closed := false
@@ -100,8 +100,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			return false, nil
 		}
 
-		conn.writeIRC(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
-		conn.writeIRC(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
+		conn.writeIRCNow(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
+		conn.writeIRCNow(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
 
 		conn.welcomed = true
 
@@ -250,14 +250,14 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 	identifier := chat.Identifier()
 
-	conn.writeIRC(fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier))
-	conn.writeIRC(fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name))
+	conn.writeIRCNow(fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier))
+	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name))
 
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
 		if participant.Contact.IsMe {
 			if participant.IsAdmin {
-				conn.writeIRC(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.nickname))
+				conn.writeIRCNow(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.nickname))
 			}
 			continue
 		}
@@ -270,8 +270,8 @@ func (conn *Connection) joinChat(chat *Chat) error {
 		names = append(names, prefix+participant.SafeName())
 	}
 
-	conn.writeIRC(fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
-	conn.writeIRC(fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.nickname, identifier))
+	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
+	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.nickname, identifier))
 
 	chat.Joined = true
 	return nil

@@ -9,7 +9,12 @@ import (
 	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
-func (conn *Connection) writeIRC(msg string) error {
+func (conn *Connection) writeIRC(time time.Time, msg string) error {
+	if conn.HasCapability("server-time") {
+		timeFormat := time.UTC().Format("2006-01-02T15:04:05.000Z")
+		msg = fmt.Sprintf("@time=%s %s", timeFormat, msg)
+	}
+
 	bytes := []byte(msg + "\n")
 
 	n, err := conn.socket.Write(bytes)
@@ -22,15 +27,18 @@ func (conn *Connection) writeIRC(msg string) error {
 	return nil
 }
 
-func (conn *Connection) status(body string) error {
-	logMessage(time.Now(), "status", conn.nickname, body)
-	msg := formatPrivateMessage(time.Now(), "status", conn.nickname, body)
-	return conn.writeIRC(msg)
+func (conn *Connection) writeIRCNow(msg string) error {
+	return conn.writeIRC(time.Now(), msg)
 }
 
-func formatPrivateMessage(date time.Time, from, to, line string) string {
-	dateFormat := date.UTC().Format("2006-01-02T15:04:05.000Z")
-	return fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", dateFormat, from, to, line)
+func (conn *Connection) status(body string) error {
+	logMessage(time.Now(), "status", conn.nickname, body)
+	msg := formatPrivateMessage("status", conn.nickname, body)
+	return conn.writeIRCNow(msg)
+}
+
+func formatPrivateMessage(from, to, line string) string {
+	return fmt.Sprintf(":%s PRIVMSG %s :%s", from, to, line)
 }
 
 func (conn *Connection) AddCapability(cap string) {
@@ -49,7 +57,7 @@ func (conn *Connection) HasCapability(cap string) bool {
 }
 
 func (conn *Connection) handleIRCCommand(msg *irc.Message) {
-	write := conn.writeIRC
+	write := conn.writeIRCNow
 	status := conn.status
 
 	switch msg.Command {

@@ -119,15 +119,15 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	if msg.QuotedMessageObject != nil {
 		message := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
 		line := "> " + strings.SplitN(message, "\n", 2)[0]
-		str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
-		conn.writeIRC(str)
+		str := formatPrivateMessage(senderSafeName, to, line)
+		conn.writeIRC(msg.Time(), str)
 	}
 
 	message := getMessageBody(msg, chat.Participants, conn.me)
 	for _, line := range strings.Split(message, "\n") {
 		logMessage(msg.Time(), senderSafeName, to, line)
-		str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
-		conn.writeIRC(str)
+		str := formatPrivateMessage(senderSafeName, to, line)
+		conn.writeIRC(msg.Time(), str)
 	}
 
 	return nil
@@ -184,13 +184,13 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 			// So just skip this, since otherwise we JOIN double.
 			break
 		}
-		conn.writeIRC(fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier()))
+		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier()))
 
 	case "leave":
-		conn.writeIRC(fmt.Sprintf(":%s PART %s", recipient, chat.Identifier()))
+		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s PART %s", recipient, chat.Identifier()))
 
 	case "remove":
-		conn.writeIRC(fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
+		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
 
 	default:
 		fmt.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
