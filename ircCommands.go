@@ -55,7 +55,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 	case "CAP":
 		switch msg.Params[0] {
 		case "LS":
-			write(":whapp-irc CAP * LS :server-time")
+			write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
 
 		case "LIST":
 			write(":whapp-irc CAP * LIST :" + strings.Join(conn.caps, " "))

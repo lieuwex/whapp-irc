@@ -150,7 +150,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	for _, c := range conn.Chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
-		if !found {
+		if !found || !conn.HasCapability("whapp-irc/replay") {
 			conn.timestampMap.Set(c.ID, c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
