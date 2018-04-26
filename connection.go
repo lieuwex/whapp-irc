@@ -41,7 +41,6 @@ type Connection struct {
 	waitch chan bool
 
 	lastMessageTimestampByChatIDs map[string]int64
-	dbMessageIDsDirty             bool
 
 	localStorage map[string]string
 }
@@ -330,7 +329,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	for _, c := range conn.Chats {
 		if _, found := m[c.ID]; !found {
 			m[c.ID] = c.rawChat.Timestamp
-			conn.dbMessageIDsDirty = true
+			go conn.saveDatabaseEntry()
 			continue
 		} else if c.rawChat.Timestamp <= m[c.ID] {
 			continue
@@ -357,27 +356,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 		}
 	}
-
-	go func() {
-		ticker := time.Tick(2 * time.Second)
-		for _ = range ticker {
-			if !conn.dbMessageIDsDirty {
-				continue
-			}
-
-			err := userDb.SaveItem(conn.nickname, database.User{
-				Nickname:             conn.nickname,
-				LocalStorage:         conn.localStorage,
-				LastReceivedReceipts: conn.lastMessageTimestampByChatIDs,
-			})
-			if err != nil {
-				log.Printf("error while updating user entry: %s\n", err.Error())
-				continue
-			}
-
-			conn.dbMessageIDsDirty = false
-		}
-	}()
 
 	go func() {
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
@@ -723,7 +701,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	lastTimestamp, found := conn.lastMessageTimestampByChatIDs[chat.ID]
 	if !found || msg.Timestamp > lastTimestamp {
 		conn.lastMessageTimestampByChatIDs[chat.ID] = msg.Timestamp
-		conn.dbMessageIDsDirty = true
+		go conn.saveDatabaseEntry()
 	}
 
 	if msg.IsNotification {
@@ -856,4 +834,16 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 	}
 
 	return nil
+}
+
+func (conn *Connection) saveDatabaseEntry() error {
+	err := userDb.SaveItem(conn.nickname, database.User{
+		Nickname:             conn.nickname,
+		LocalStorage:         conn.localStorage,
+		LastReceivedReceipts: conn.lastMessageTimestampByChatIDs,
+	})
+	if err != nil {
+		log.Printf"error while updating user entry: %s\n", err.Error())
+	}
+	return err
 }
