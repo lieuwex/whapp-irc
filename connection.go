@@ -347,6 +347,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 
 		for _, msg := range messages {
+			if msg.Timestamp <= m[c.ID] {
+				continue
+			}
+
 			if err := conn.handleWhappMessage(msg); err != nil {
 				fmt.Printf("error handling older whapp message: %s\n", err.Error())
 				continue
