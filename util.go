@@ -101,6 +101,5 @@ func noDirListing(handler http.Handler) http.HandlerFunc {
 func logAtTime(time time.Time, format string, items ...interface{}) {
 	timeStr := time.Format("2006-01-02 15:04:05")
 	str := fmt.Sprintf(format, items...)
-
 	fmt.Printf("%s %s\n", timeStr, str)
 }

@@ -123,25 +123,23 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 	go func() {
 		for {
-			var msg *irc.Message
 			select {
 			case <-conn.waitch:
 				return
-			case msg = <-ircCh:
-			}
-
-			if msg.Command == "NICK" {
-				conn.nickname = msg.Params[0]
-				if _, err := welcome(); err != nil {
-					status("giving up trying to setup whapp bridge: " + err.Error())
-					socket.Close()
-					closeWaitCh()
-					return
+			case msg := <-ircCh:
+				if msg.Command == "NICK" {
+					conn.nickname = msg.Params[0]
+					if _, err := welcome(); err != nil {
+						status("giving up trying to setup whapp bridge: " + err.Error())
+						socket.Close()
+						closeWaitCh()
+						return
+					}
+					continue
 				}
-				continue
-			}
 
-			conn.handleIRCCommand(msg)
+				conn.handleIRCCommand(msg)
+			}
 		}
 	}()
 
@@ -184,8 +182,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
 
 		for {
-			var res bool
-
 			select {
 			case <-conn.waitch:
 				return
@@ -195,17 +191,16 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				closeWaitCh()
 				return
 
-			case res = <-resCh:
+			case res := <-resCh:
+				if res {
+					continue
+				}
+
+				fmt.Println("logged out of whatsapp!")
+
+				closeWaitCh()
+				return
 			}
-
-			if res {
-				continue
-			}
-
-			fmt.Println("logged out of whatsapp!")
-
-			closeWaitCh()
-			return
 		}
 	}()
 

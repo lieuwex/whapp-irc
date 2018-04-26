@@ -106,12 +106,11 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 			}
 		}
 
-		_, err = fs.AddBlob(
+		if _, err := fs.AddBlob(
 			msg.MediaFileHash,
 			ext,
 			bytes,
-		)
-		if err != nil {
+		); err != nil {
 			return err
 		}
 	}
