@@ -22,9 +22,10 @@ func (conn *Connection) writeIRC(msg string) error {
 	return nil
 }
 
-func (conn *Connection) status(msg string) error {
-	logMessage(time.Now(), "status", conn.nickname, msg)
-	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
+func (conn *Connection) status(body string) error {
+	logMessage(time.Now(), "status", conn.nickname, body)
+	msg := formatPrivateMessage(time.Now(), "status", conn.nickname, body)
+	return conn.writeIRC(msg)
 }
 
 func formatPrivateMessage(date time.Time, from, to, line string) string {
