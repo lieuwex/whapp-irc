@@ -32,6 +32,21 @@ func formatPrivateMessage(date time.Time, from, to, line string) string {
 	return fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", dateFormat, from, to, line)
 }
 
+func (conn *Connection) AddCapability(cap string) {
+	cap = strings.TrimSpace(cap)
+	cap = strings.ToUpper(cap)
+	conn.caps = append(conn.caps, cap)
+}
+func (conn *Connection) HasCapability(cap string) bool {
+	cap = strings.ToUpper(cap)
+	for _, x := range conn.caps {
+		if strings.ToUpper(x) == cap {
+			return true
+		}
+	}
+	return false
+}
+
 func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 	write := conn.writeIRC
 	status := conn.status
@@ -42,11 +57,15 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		case "LS":
 			write(":whapp-irc CAP * LS :server-time")
 
+		case "LIST":
+			write(":whapp-irc CAP * LIST :" + strings.Join(conn.caps, " "))
+
 		case "REQ":
 			caps := strings.Split(msg.Trailing(), " ")
 			for _, cap := range caps {
-				conn.caps = append(conn.caps, strings.TrimSpace(cap))
+				conn.AddCapability(cap)
 			}
+			write(":whapp-irc CAP * ACK :" + strings.Join(conn.caps, " "))
 		}
 
 	case "PRIVMSG":
