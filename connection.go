@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
-	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
 func logMessage(time time.Time, from, to, message string) {
@@ -130,195 +128,18 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			case msg = <-ircCh:
 			}
 
-			switch msg.Command {
-			case "NICK":
+			if msg.Command == "NICK" {
 				conn.nickname = msg.Params[0]
-				_, err := welcome()
-				if err != nil {
+				if _, err := welcome(); err != nil {
 					status("giving up trying to setup whapp bridge: " + err.Error())
 					socket.Close()
 					closeWaitCh()
 					return
 				}
-
-			case "CAP":
-				switch msg.Params[0] {
-				case "LS":
-					write(":whapp-irc CAP * LS :server-time")
-
-				case "REQ":
-					caps := strings.Split(msg.Trailing(), " ")
-					for _, cap := range caps {
-						conn.caps = append(conn.caps, strings.TrimSpace(cap))
-					}
-				}
-
-			case "PRIVMSG":
-				to := msg.Params[0]
-				body := msg.Params[1]
-
-				if tag, text, ok := ctcp.Decode(msg.Trailing()); ok && tag == ctcp.ACTION {
-					body = fmt.Sprintf("_%s_", text)
-				}
-
-				logMessage(time.Now(), conn.nickname, to, body)
-
-				if to == "status" {
-					continue
-				}
-
-				chat := conn.GetChatByIdentifier(to)
-				if chat == nil {
-					status("unknown chat")
-					continue
-				}
-
-				cid := chat.ID
-				err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, body)
-				if err != nil {
-					fmt.Printf("err while sending %s\n", err.Error())
-				}
-
-			case "JOIN":
-				chat := conn.GetChatByIdentifier(msg.Params[0])
-				if chat == nil {
-					status("chat not found")
-					continue
-				}
-				err := conn.joinChat(chat)
-				if err != nil {
-					status("error while joining: " + err.Error())
-				}
-
-			case "PART":
-				chat := conn.GetChatByIdentifier(msg.Params[0])
-				if chat == nil {
-					status("unknown chat")
-					continue
-				}
-
-				// TODO: some way that we don't rejoin a person later.
-				chat.Joined = false
-
-			case "MODE":
-				if len(msg.Params) != 3 {
-					continue
-				}
-
-				ident := msg.Params[0]
-				mode := msg.Params[1]
-				nick := strings.ToLower(msg.Params[2])
-
-				chat := conn.GetChatByIdentifier(ident)
-				if chat == nil {
-					status("chat not found")
-					continue
-				} else if mode != "+o" {
-					continue
-				}
-
-				for _, p := range chat.Participants {
-					if strings.ToLower(p.SafeName()) == nick {
-						err := chat.rawChat.SetAdmin(conn.bridge.ctx, conn.bridge.WI, p.ID, true)
-						if err != nil {
-							str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
-							status(str)
-							fmt.Println(str)
-							break
-						}
-
-						write(fmt.Sprintf(":%s MODE %s +o %s", conn.nickname, ident, nick))
-
-						break
-					}
-				}
-
-			case "LIST":
-				// TODO: support args
-				for _, c := range conn.Chats {
-					nParticipants := len(c.Participants)
-					if !c.IsGroupChat {
-						nParticipants = 2
-					}
-
-					write(fmt.Sprintf(":whapp-irc 322 %s %s %d :%s", conn.nickname, c.Identifier(), nParticipants, c.Name))
-				}
-				write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.nickname))
-
-			case "WHO":
-				identifier := msg.Params[0]
-				chat := conn.GetChatByIdentifier(identifier)
-				if chat != nil && chat.IsGroupChat {
-					for _, p := range chat.Participants {
-						if p.Contact.IsMe {
-							continue
-						}
-
-						presenceStamp := "H"
-						presence, found, err := conn.getPresenceByUserID(p.ID)
-						if found && err == nil && !presence.IsOnline {
-							presenceStamp = "G"
-						}
-
-						msg := fmt.Sprintf(
-							":whapp-irc 352 %s %s %s whapp-irc whapp-irc %s %s :0 %s",
-							conn.nickname,
-							identifier,
-							p.SafeName(),
-							p.SafeName(),
-							presenceStamp,
-							p.FullName(),
-						)
-						write(msg)
-					}
-				}
-				write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
-
-			case "KICK":
-				chatIdentifier := msg.Params[0]
-				nick := strings.ToLower(msg.Params[1])
-
-				chat := conn.GetChatByIdentifier(chatIdentifier)
-				if chat == nil || !chat.IsGroupChat {
-					write(fmt.Sprintf(":whapp-irc 403 %s %s :No such channel", conn.nickname, chatIdentifier))
-					continue
-				}
-
-				for _, p := range chat.Participants {
-					if strings.ToLower(p.SafeName()) == nick {
-						err := chat.rawChat.RemoveParticipant(conn.bridge.ctx, conn.bridge.WI, p.ID)
-						if err != nil {
-							str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
-							status(str)
-							fmt.Println(str)
-						}
-						break
-					}
-				}
-
-			case "INVITE":
-				nick := msg.Params[0]
-				chatIdentifier := msg.Params[1]
-
-				chat := conn.GetChatByIdentifier(chatIdentifier)
-				if chat == nil || !chat.IsGroupChat {
-					write(fmt.Sprintf(":whapp-irc 442 %s %s :You're not on that channel", conn.nickname, chatIdentifier))
-					continue
-				}
-				personChat := conn.GetChatByIdentifier(nick)
-				if personChat == nil || personChat.IsGroupChat {
-					write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, nick))
-					continue
-				}
-
-				err := chat.rawChat.AddParticipant(conn.bridge.ctx, conn.bridge.WI, personChat.ID)
-				if err != nil {
-					str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
-					status(str)
-					fmt.Println(str)
-					break
-				}
+				continue
 			}
+
+			conn.handleIRCCommand(msg)
 		}
 	}()
 
@@ -451,24 +272,6 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 	chat.Joined = true
 	return nil
-}
-
-func (conn *Connection) writeIRC(msg string) error {
-	bytes := []byte(msg + "\n")
-
-	n, err := conn.socket.Write(bytes)
-	if err != nil {
-		return err
-	} else if n != len(bytes) {
-		return fmt.Errorf("bytes length mismatch")
-	}
-
-	return nil
-}
-
-func (conn *Connection) status(msg string) error {
-	logMessage(time.Now(), "status", conn.nickname, msg)
-	return conn.writeIRC(fmt.Sprintf(":status PRIVMSG %s :%s", conn.nickname, msg))
 }
 
 func (conn *Connection) GetChatByID(ID string) *Chat {
@@ -623,47 +426,6 @@ func (conn *Connection) setup() error {
 	return nil
 }
 
-func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) string {
-	whappParticipants := make([]whapp.Participant, len(participants))
-	for i, p := range participants {
-		whappParticipants[i] = whapp.Participant(p)
-	}
-
-	if msg.Location != nil {
-		return fmt.Sprintf(
-			"https://maps.google.com/?q=%f,%f",
-			msg.Location.Latitude,
-			msg.Location.Longitude,
-		)
-	} else if msg.IsMMS {
-		res := "--file--"
-		if f, has := fs.HashToPath[msg.MediaFileHash]; has {
-			res = f.URL
-		}
-
-		if msg.Caption != "" {
-			res += " " + msg.FormatCaption(whappParticipants, me.Pushname)
-		}
-
-		return res
-	}
-
-	return msg.FormatBody(whappParticipants, me.Pushname)
-}
-
-func formatContact(contact whapp.Contact, isAdmin bool) Participant {
-	return Participant{
-		ID:      contact.ID,
-		IsAdmin: isAdmin,
-		Contact: contact,
-	}
-}
-
-func formatPrivateMessage(date time.Time, from, to, line string) string {
-	dateFormat := date.UTC().Format("2006-01-02T15:04:05.000Z")
-	return fmt.Sprintf("@time=%s :%s PRIVMSG %s :%s", dateFormat, from, to, line)
-}
-
 func (conn *Connection) getPresenceByUserID(userID string) (presence whapp.Presence, found bool, err error) {
 	for _, c := range conn.Chats {
 		if c.ID == userID {
@@ -673,166 +435,6 @@ func (conn *Connection) getPresenceByUserID(userID string) (presence whapp.Prese
 	}
 
 	return whapp.Presence{}, false, nil
-}
-
-func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
-	var err error
-
-	chat := conn.GetChatByID(msg.Chat.ID)
-	if chat == nil {
-		chat, err = conn.addChat(msg.Chat)
-		if err != nil {
-			return err
-		}
-	}
-
-	if chat.IsGroupChat && !chat.Joined {
-		if err := conn.joinChat(chat); err != nil {
-			return err
-		}
-	}
-
-	if chat.HasMessageID(msg.ID.Serialized) {
-		return nil // already handled
-	}
-	chat.AddMessageID(msg.ID.Serialized)
-
-	lastTimestamp, found := conn.lastMessageTimestampByChatIDs[chat.ID]
-	if !found || msg.Timestamp > lastTimestamp {
-		conn.lastMessageTimestampByChatIDs[chat.ID] = msg.Timestamp
-		go conn.saveDatabaseEntry()
-	}
-
-	if msg.IsNotification {
-		return conn.handleWhappNotification(chat, msg)
-	}
-
-	sender := formatContact(*msg.Sender, false)
-	senderSafeName := sender.SafeName()
-
-	if msg.IsSentByMeFromWeb {
-		return nil
-	} else if msg.IsSentByMe {
-		senderSafeName = conn.nickname
-	}
-
-	var to string
-	if chat.IsGroupChat || msg.IsSentByMe {
-		to = chat.Identifier()
-	} else {
-		to = conn.nickname
-	}
-
-	_, ok := fs.HashToPath[msg.MediaFileHash]
-	if msg.IsMMS && !ok {
-		bytes, err := msg.DownloadMedia()
-		if err != nil {
-			return err
-		}
-
-		ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
-		if ext == "" {
-			ext = filepath.Ext(msg.MediaFilename)
-			if ext != "" {
-				ext = ext[1:]
-			}
-		}
-
-		_, err = fs.AddBlob(
-			msg.MediaFileHash,
-			ext,
-			bytes,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	if msg.QuotedMessageObject != nil {
-		message := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
-		line := "> " + strings.SplitN(message, "\n", 2)[0]
-		str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
-		conn.writeIRC(str)
-	}
-
-	message := getMessageBody(msg, chat.Participants, conn.me)
-	for _, line := range strings.Split(message, "\n") {
-		logMessage(msg.Time(), senderSafeName, to, line)
-		str := formatPrivateMessage(msg.Time(), senderSafeName, to, line)
-		conn.writeIRC(str)
-	}
-
-	return nil
-}
-
-func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) error {
-	if msg.Type != "gp2" {
-		return fmt.Errorf("no idea what to do with notification type %s", msg.Type)
-	} else if len(msg.RecipientIDs) == 0 {
-		return nil
-	}
-
-	findName := func(id string) string {
-		for _, p := range chat.Participants {
-			if p.ID == id {
-				return p.SafeName()
-			}
-		}
-
-		if chat := conn.GetChatByID(id); chat != nil && !chat.IsGroupChat {
-			return chat.Identifier()
-		}
-
-		return strings.Split(id, "@")[0]
-	}
-
-	if msg.Sender != nil {
-		msg.From = msg.Sender.ID
-	}
-
-	var author string
-	if msg.From == conn.me.SelfID {
-		author = conn.nickname
-	} else {
-		author = findName(msg.From)
-	}
-
-	recipientSelf := msg.RecipientIDs[0] == conn.me.SelfID
-	var recipient string
-	if recipientSelf {
-		recipient = conn.nickname
-	} else {
-		recipient = findName(msg.RecipientIDs[0])
-	}
-
-	switch msg.Subtype {
-	case "create":
-		break
-
-	case "add", "invite":
-		if recipientSelf {
-			// We already handle the new chat JOIN in
-			// `Connection::handleWhappMessage` in a better way.
-			// So just skip this, since otherwise we JOIN double.
-			break
-		}
-		conn.writeIRC(fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier()))
-
-	case "leave":
-		conn.writeIRC(fmt.Sprintf(":%s PART %s", recipient, chat.Identifier()))
-
-	case "remove":
-		conn.writeIRC(fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
-
-	default:
-		fmt.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
-	}
-
-	if recipientSelf && (msg.Subtype == "leave" || msg.Subtype == "remove") {
-		chat.Joined = false
-	}
-
-	return nil
 }
 
 func (conn *Connection) saveDatabaseEntry() error {
