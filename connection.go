@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"net"
 	"regexp"
 	"strings"
@@ -145,15 +146,21 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 	<-conn.welcomeCh
 
+	empty := conn.timestampMap.Length() == 0
 	for _, c := range conn.Chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
-		if !found || !conn.HasCapability("whapp-irc/replay") {
+		if empty || !conn.HasCapability("whapp-irc/replay") {
 			conn.timestampMap.Set(c.ID, c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
 		} else if c.rawChat.Timestamp <= prevTimestamp {
 			continue
+		}
+
+		if !found {
+			// fetch all older messages
+			prevTimestamp = math.MinInt64
 		}
 
 		messages, err := c.rawChat.GetMessagesFromChatTillDate(

@@ -45,3 +45,10 @@ func (tm *TimestampMap) Swap(m map[string]int64) {
 
 	tm.m = m
 }
+
+func (tm *TimestampMap) Length() int {
+	tm.mutex.RLock()
+	defer tm.mutex.RUnlock()
+
+	return len(tm.m)
+}
