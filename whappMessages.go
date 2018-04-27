@@ -44,6 +44,11 @@ func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) 
 }
 
 func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
+	// HACK
+	if msg.Type == "e2e_notification" {
+		return nil
+	}
+
 	var err error
 
 	chat := conn.GetChatByID(msg.Chat.ID)
