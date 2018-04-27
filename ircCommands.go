@@ -62,6 +62,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 
 	switch msg.Command {
 	case "CAP":
+		conn.startedNegotiation = true
 		switch msg.Params[0] {
 		case "LS":
 			write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
@@ -75,6 +76,12 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 				conn.AddCapability(cap)
 			}
 			write(":whapp-irc CAP * ACK :" + strings.Join(conn.caps, " "))
+
+		case "END":
+			if !conn.negotiationFinished {
+				conn.negotiationFinished = true
+				close(conn.negotiationFinishedChannel)
+			}
 		}
 
 	case "PRIVMSG":

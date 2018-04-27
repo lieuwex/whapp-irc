@@ -28,7 +28,11 @@ type Connection struct {
 
 	nickname string
 	me       whapp.Me
-	caps     []string
+
+	startedNegotiation         bool
+	negotiationFinished        bool
+	negotiationFinishedChannel chan bool
+	caps                       []string
 
 	bridge *Bridge
 	socket *net.TCPConn
@@ -145,6 +149,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}()
 
 	<-conn.welcomeCh
+	if conn.startedNegotiation {
+		<-conn.negotiationFinishedChannel
+	}
 
 	empty := conn.timestampMap.Length() == 0
 	for _, c := range conn.Chats {
