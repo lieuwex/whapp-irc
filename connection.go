@@ -51,7 +51,8 @@ func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
 
-		welcomeCh: make(chan bool),
+		welcomeCh:                  make(chan bool),
+		negotiationFinishedChannel: make(chan bool),
 
 		waitch: make(chan bool),
 
