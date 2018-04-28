@@ -43,7 +43,6 @@ func formatPrivateMessage(from, to, line string) string {
 
 func (conn *Connection) AddCapability(cap string) {
 	cap = strings.TrimSpace(cap)
-	cap = strings.ToUpper(cap)
 	conn.caps = append(conn.caps, cap)
 }
 func (conn *Connection) HasCapability(cap string) bool {
