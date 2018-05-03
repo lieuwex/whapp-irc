@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"regexp"
@@ -18,7 +19,8 @@ import (
 )
 
 func logMessage(time time.Time, from, to, message string) {
-	logAtTime(time, "%s->%s: %s", from, to, message)
+	timeStr := time.Format("2006-01-02 15:04:05")
+	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)
 }
 
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
@@ -87,8 +89,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		for {
 			msg, err := decoder.Decode()
 			if err != nil {
-				fmt.Printf("error while listening for IRC messages: %s\n", err.Error())
-				closeWaitCh()
 				return
 			}
 
@@ -128,17 +128,22 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 
 	go func() {
+		defer closeWaitCh()
+
 		for {
 			select {
 			case <-conn.waitch:
 				return
-			case msg := <-ircCh:
+			case msg, ok := <-ircCh:
+				if !ok {
+					log.Println("error while listening for IRC messages")
+					return
+				}
+
 				if msg.Command == "NICK" {
 					conn.nickname = msg.Params[0]
 					if _, err := welcome(); err != nil {
 						status("giving up trying to setup whapp bridge: " + err.Error())
-						socket.Close()
-						closeWaitCh()
 						return
 					}
 					continue
@@ -194,6 +199,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 
 	go func() {
+		defer closeWaitCh()
+
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
 
 		for {
@@ -203,7 +210,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case err := <-errCh:
 				fmt.Printf("error while listening for whatsapp loggedin state: %s\n", err.Error())
-				closeWaitCh()
 				return
 
 			case res := <-resCh:
@@ -213,13 +219,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 				fmt.Println("logged out of whatsapp!")
 
-				closeWaitCh()
 				return
 			}
 		}
 	}()
 
 	go func() {
+		defer closeWaitCh()
+
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
 			conn.bridge.ctx,
 			500*time.Millisecond,
@@ -232,7 +239,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case err := <-errCh:
 				fmt.Printf("error while listening for whatsapp messages: %s\n", err.Error())
-				closeWaitCh()
 				return
 
 			case msg := <-messageCh:
@@ -452,7 +458,7 @@ func (conn *Connection) saveDatabaseEntry() error {
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})
 	if err != nil {
-		logAtTime(time.Now(), "error while updating user entry: %s\n", err.Error())
+		log.Printf("error while updating user entry: %s\n", err.Error())
 	}
 	return err
 }

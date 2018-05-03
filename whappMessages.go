@@ -96,8 +96,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 		to = conn.nickname
 	}
 
-	_, ok := fs.HashToPath[msg.MediaFileHash]
-	if msg.IsMMS && !ok {
+	if _, ok := fs.HashToPath[msg.MediaFileHash]; msg.IsMMS && !ok {
 		bytes, err := msg.DownloadMedia()
 		if err != nil {
 			return err

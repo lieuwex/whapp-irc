@@ -110,25 +110,31 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		}
 
 	case "JOIN":
-		chat := conn.GetChatByIdentifier(msg.Params[0])
-		if chat == nil {
-			status("chat not found")
-			return
-		}
-		err := conn.joinChat(chat)
-		if err != nil {
-			status("error while joining: " + err.Error())
+		idents := strings.Split(msg.Params[0], ",")
+		for _, ident := range idents {
+			chat := conn.GetChatByIdentifier(ident)
+			if chat == nil {
+				status("chat not found: " + msg.Params[0])
+				return
+			}
+			err := conn.joinChat(chat)
+			if err != nil {
+				status("error while joining: " + err.Error())
+			}
 		}
 
 	case "PART":
-		chat := conn.GetChatByIdentifier(msg.Params[0])
-		if chat == nil {
-			status("unknown chat")
-			return
-		}
+		idents := strings.Split(msg.Params[0], ",")
+		for _, ident := range idents {
+			chat := conn.GetChatByIdentifier(ident)
+			if chat == nil {
+				status("unknown chat")
+				return
+			}
 
-		// TODO: some way that we don't rejoin a person later.
-		chat.Joined = false
+			// TODO: some way that we don't rejoin a person later.
+			chat.Joined = false
+		}
 
 	case "MODE":
 		if len(msg.Params) != 3 {
