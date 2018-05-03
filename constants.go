@@ -1,3 +1,3 @@
 package main
 
-const chromePath = "/Applications/Chromium.app/Contents/MacOS/Chromium"
+const chromePath = "/usr/bin/chromium-browser"

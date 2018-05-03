@@ -37,12 +37,14 @@ func MakeInstance(ctx context.Context, chromePath string) (*Instance, error) {
 		runner.Port(9222),
 		runner.KillProcessGroup,
 
-		// runner.Flag("headless", true),
+		runner.Flag("headless", true),
 		runner.DisableGPU,
 		runner.NoSandbox,
 
 		runner.NoFirstRun,
 		runner.NoDefaultBrowserCheck,
+
+		runner.UserAgent(userAgent),
 	)
 
 	cdp, err := chromedp.New(ctx, options)
