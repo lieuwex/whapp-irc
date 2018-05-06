@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -42,8 +43,6 @@ type Connection struct {
 	welcomed  bool
 	welcomeCh chan bool
 
-	waitch chan bool
-
 	localStorage map[string]string
 
 	timestampMap *TimestampMap
@@ -55,8 +54,6 @@ func MakeConnection() (*Connection, error) {
 
 		welcomeCh:                  make(chan bool),
 		negotiationFinishedChannel: make(chan bool),
-
-		waitch: make(chan bool),
 
 		timestampMap: MakeTimestampMap(),
 	}, nil
@@ -70,13 +67,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	write := conn.writeIRCNow
 	status := conn.status
 
-	closed := false
-	closeWaitCh := func() {
-		if !closed {
-			close(conn.waitch)
-			closed = true
-		}
-	}
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// listen for and parse messages.
 	// we want to do this outside the next irc message handle loop, so we can
@@ -128,12 +119,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 
 	go func() {
-		defer closeWaitCh()
+		defer cancel()
 
 		for {
 			select {
-			case <-conn.waitch:
+			case <-ctx.Done():
 				return
+
 			case msg, ok := <-ircCh:
 				if !ok {
 					log.Println("error while listening for IRC messages")
@@ -199,13 +191,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 
 	go func() {
-		defer closeWaitCh()
+		defer cancel()
 
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
 
 		for {
 			select {
-			case <-conn.waitch:
+			case <-ctx.Done():
 				return
 
 			case err := <-errCh:
@@ -225,7 +217,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}()
 
 	go func() {
-		defer closeWaitCh()
+		defer cancel()
 
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
 			conn.bridge.ctx,
@@ -234,7 +226,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 		for {
 			select {
-			case <-conn.waitch:
+			case <-ctx.Done():
 				return
 
 			case err := <-errCh:
@@ -251,7 +243,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
-	<-conn.waitch
+	<-ctx.Done()
+	log.Printf("connection ended: %s\n", ctx.Err())
 	return nil
 }
 
