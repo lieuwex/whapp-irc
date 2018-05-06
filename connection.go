@@ -223,6 +223,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			conn.bridge.ctx,
 			500*time.Millisecond,
 		)
+		queue := GetMessageQueue(ctx, messageCh, 50)
 
 		for {
 			select {
@@ -233,9 +234,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				fmt.Printf("error while listening for whatsapp messages: %s\n", err.Error())
 				return
 
-			case msg := <-messageCh:
-				if err := conn.handleWhappMessage(msg); err != nil {
-					fmt.Printf("error handling new whapp message: %s\n", err.Error())
+			case msgFut := <-queue:
+				msgRes := <-msgFut
+				if msgRes.Err == nil {
+					msgRes.Err = conn.handleWhappMessage(msgRes.Message)
+				}
+
+				if msgRes.Err != nil {
+					fmt.Printf("error handling new whapp message: %s\n", msgRes.Err)
 					continue
 				}
 			}
