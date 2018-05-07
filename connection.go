@@ -106,7 +106,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			conn.bridge.Stop()
 			err := conn.setup()
 			if err != nil {
-				fmt.Printf("err while setting up: %s\n", err.Error())
+				log.Printf("err while setting up: %s\n", err.Error())
 			}
 			return err
 		}, retry.Attempts(5), retry.Delay(time.Second))
@@ -174,7 +174,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			prevTimestamp,
 		)
 		if err != nil {
-			fmt.Printf("error while loading earlier messages: %s\n", err.Error())
+			log.Printf("error while loading earlier messages: %s\n", err.Error())
 			continue
 		}
 
@@ -184,7 +184,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			if err := conn.handleWhappMessage(msg); err != nil {
-				fmt.Printf("error handling older whapp message: %s\n", err.Error())
+				log.Printf("error handling older whapp message: %s\n", err.Error())
 				continue
 			}
 		}
@@ -201,7 +201,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				return
 
 			case err := <-errCh:
-				fmt.Printf("error while listening for whatsapp loggedin state: %s\n", err.Error())
+				log.Printf("error while listening for whatsapp loggedin state: %s\n", err.Error())
 				return
 
 			case res := <-resCh:
@@ -209,7 +209,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 
-				fmt.Println("logged out of whatsapp!")
+				log.Println("logged out of whatsapp!")
 
 				return
 			}
@@ -231,7 +231,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				return
 
 			case err := <-errCh:
-				fmt.Printf("error while listening for whatsapp messages: %s\n", err.Error())
+				log.Printf("error while listening for whatsapp messages: %s\n", err.Error())
 				return
 
 			case msgFut := <-queue:
@@ -241,7 +241,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				}
 
 				if msgRes.Err != nil {
-					fmt.Printf("error handling new whapp message: %s\n", msgRes.Err)
+					log.Printf("error handling new whapp message: %s\n", msgRes.Err)
 					continue
 				}
 			}
@@ -337,9 +337,9 @@ func (conn *Connection) addChat(chat whapp.Chat) (*Chat, error) {
 	}
 
 	if chat.IsGroupChat {
-		fmt.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
+		log.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
 	} else {
-		fmt.Println(res.Identifier())
+		log.Println(res.Identifier())
 	}
 
 	for i, c := range conn.Chats {
@@ -372,7 +372,7 @@ func (conn *Connection) setup() error {
 
 		err := conn.bridge.WI.SetLocalStorage(conn.bridge.ctx, user.LocalStorage)
 		if err != nil {
-			fmt.Printf("error while setting local storage: %s\n", err.Error())
+			log.Printf("error while setting local storage: %s\n", err.Error())
 		}
 	}
 
@@ -408,7 +408,7 @@ func (conn *Connection) setup() error {
 
 	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(conn.bridge.ctx)
 	if err != nil {
-		fmt.Printf("error while getting local storage: %s\n", err.Error())
+		log.Printf("error while getting local storage: %s\n", err.Error())
 	} else {
 		if err := conn.saveDatabaseEntry(); err != nil {
 			return err
@@ -417,7 +417,7 @@ func (conn *Connection) setup() error {
 
 	if qrFile != nil {
 		if err = fs.RemoveFile(qrFile); err != nil {
-			fmt.Printf("error while removing QR code: %s\n", err.Error())
+			log.Printf("error while removing QR code: %s\n", err.Error())
 		}
 	}
 

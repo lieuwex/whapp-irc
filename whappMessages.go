@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"whapp-irc/whapp"
@@ -196,7 +197,7 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
 
 	default:
-		fmt.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
+		log.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
 	}
 
 	if recipientSelf && (msg.Subtype == "leave" || msg.Subtype == "remove") {

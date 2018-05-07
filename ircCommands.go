@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -106,7 +107,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		cid := chat.ID
 		err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, body)
 		if err != nil {
-			fmt.Printf("err while sending %s\n", err.Error())
+			log.Printf("err while sending %s\n", err.Error())
 		}
 
 	case "JOIN":
@@ -159,7 +160,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 				if err != nil {
 					str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
 					status(str)
-					fmt.Println(str)
+					log.Println(str)
 					break
 				}
 
@@ -226,7 +227,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 				if err != nil {
 					str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
 					status(str)
-					fmt.Println(str)
+					log.Println(str)
 				}
 				break
 			}
@@ -251,7 +252,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		if err != nil {
 			str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
 			status(str)
-			fmt.Println(str)
+			log.Println(str)
 			break
 		}
 	}
