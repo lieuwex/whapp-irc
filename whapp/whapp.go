@@ -31,7 +31,7 @@ type Instance struct {
 }
 
 // MakeInstance makes a new Instance.
-func MakeInstance(ctx context.Context, chromePath string) (*Instance, error) {
+func MakeInstance(ctx context.Context, chromePath string, headless bool) (*Instance, error) {
 	options := chromedp.WithRunnerOptions(
 		runner.Path(chromePath),
 		runner.Port(9222),
@@ -39,7 +39,7 @@ func MakeInstance(ctx context.Context, chromePath string) (*Instance, error) {
 		runner.KillProcessGroup,
 		runner.ForceKill,
 
-		runner.Flag("headless", true),
+		runner.Flag("headless", headless),
 		runner.DisableGPU,
 		runner.NoSandbox,
 
