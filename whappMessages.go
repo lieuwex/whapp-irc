@@ -44,6 +44,33 @@ func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) 
 	return msg.FormatBody(whappParticipants, me.Pushname)
 }
 
+func downloadAndStoreMedia(msg whapp.Message) error {
+	if _, ok := fs.HashToPath[msg.MediaFileHash]; msg.IsMMS && !ok {
+		bytes, err := msg.DownloadMedia()
+		if err != nil {
+			return err
+		}
+
+		ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
+		if ext == "" {
+			ext = filepath.Ext(msg.MediaFilename)
+			if ext != "" {
+				ext = ext[1:]
+			}
+		}
+
+		if _, err := fs.AddBlob(
+			msg.MediaFileHash,
+			ext,
+			bytes,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	// HACK
 	if msg.Type == "e2e_notification" {
@@ -97,27 +124,8 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 		to = conn.nickname
 	}
 
-	if _, ok := fs.HashToPath[msg.MediaFileHash]; msg.IsMMS && !ok {
-		bytes, err := msg.DownloadMedia()
-		if err != nil {
-			return err
-		}
-
-		ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
-		if ext == "" {
-			ext = filepath.Ext(msg.MediaFilename)
-			if ext != "" {
-				ext = ext[1:]
-			}
-		}
-
-		if _, err := fs.AddBlob(
-			msg.MediaFileHash,
-			ext,
-			bytes,
-		); err != nil {
-			return err
-		}
+	if err := downloadAndStoreMedia(msg); err != nil {
+		return err
 	}
 
 	if msg.QuotedMessageObject != nil {
