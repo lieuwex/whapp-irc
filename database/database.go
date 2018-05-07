@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
+	"whapp-irc/database/lockmap"
 )
 
 type User struct {
@@ -15,8 +15,8 @@ type User struct {
 }
 
 type Database struct {
-	Folder string
-	lock   sync.Mutex
+	Folder  string
+	lockMap *lockmap.LockMap
 }
 
 func MakeDatabase(folder string) (*Database, error) {
@@ -25,7 +25,8 @@ func MakeDatabase(folder string) (*Database, error) {
 	}
 
 	return &Database{
-		Folder: folder,
+		Folder:  folder,
+		lockMap: lockmap.New(),
 	}, nil
 }
 
@@ -34,12 +35,17 @@ func (db *Database) GetItem(id string) (item interface{}, found bool, err error)
 		return nil, false, ErrIDEmpty
 	}
 
-	dir, file := filepath.Split(id)
+	readFile := func(id string) ([]byte, error) {
+		dir, file := filepath.Split(id)
+		path := filepath.Join(db.Folder, dir, file+".json")
 
-	db.lock.Lock()
-	defer db.lock.Unlock()
+		unlock := db.lockMap.RLock(id)
+		defer unlock()
 
-	bytes, err := ioutil.ReadFile(filepath.Join(db.Folder, dir, file+".json"))
+		return ioutil.ReadFile(path)
+	}
+
+	bytes, err := readFile(id)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, false, nil
@@ -49,11 +55,9 @@ func (db *Database) GetItem(id string) (item interface{}, found bool, err error)
 	}
 
 	var res interface{}
-
 	if err := json.Unmarshal(bytes, &res); err != nil {
 		return nil, false, err
 	}
-
 	return res, true, nil
 }
 
@@ -64,13 +68,14 @@ func (db *Database) SaveItem(id string, item interface{}) error {
 
 	dir, file := filepath.Split(id)
 
-	db.lock.Lock()
-	defer db.lock.Unlock()
-
 	bytes, err := json.Marshal(item)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(db.Folder, dir, file+".json"), bytes, 0777)
+	unlock := db.lockMap.Lock(id)
+	defer unlock()
+
+	path := filepath.Join(db.Folder, dir, file+".json")
+	return ioutil.WriteFile(path, bytes, 0777)
 }
