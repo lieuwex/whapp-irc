@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net"
 	"whapp-irc/whapp"
 )
 
@@ -12,8 +11,6 @@ type Bridge struct {
 	started bool
 	ctx     context.Context
 	cancel  context.CancelFunc
-
-	socket *net.TCPConn
 }
 
 func MakeBridge() *Bridge {

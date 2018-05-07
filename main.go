@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -20,7 +19,7 @@ var userDb *database.Database
 func handleSocket(socket *net.TCPConn) {
 	conn, err := MakeConnection()
 	if err != nil {
-		fmt.Printf("error while making connection: %s\n", err.Error())
+		log.Printf("error while making connection: %s", err)
 	}
 	go conn.BindSocket(socket)
 }
@@ -68,7 +67,7 @@ func main() {
 	for {
 		socket, err := listener.AcceptTCP()
 		if err != nil {
-			log.Printf("%#v", err)
+			log.Printf("error accepting TCP connection: %#v", err)
 			continue
 		}
 
