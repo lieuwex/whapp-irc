@@ -299,12 +299,16 @@ func (wi *Instance) inject(ctx context.Context) error {
 		}
 
 		const metadata = chat.groupMetadata && chat.groupMetadata.toJSON();
-		const description = metadata == null ? null : {
-			id: metadata.descId,
-			desc: metadata.desc,
-			owner: metadata.descOwner,
-			time: metadata.descTime,
-		};
+
+		let description = null;
+		if (metadata != null && metadata.desc) {
+			description = {
+				id: metadata.descId,
+				desc: metadata.desc,
+				owner: metadata.descOwner,
+				time: metadata.descTime,
+			};
+		}
 
 		return Object.assign(chat.toJSON(), {
 			kind: chat.kind,
