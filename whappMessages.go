@@ -177,39 +177,41 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 		author = findName(msg.From)
 	}
 
-	recipientSelf := msg.RecipientIDs[0] == conn.me.SelfID
-	var recipient string
-	if recipientSelf {
-		recipient = conn.nickname
-	} else {
-		recipient = findName(msg.RecipientIDs[0])
-	}
-
-	switch msg.Subtype {
-	case "create":
-		break
-
-	case "add", "invite":
+	for _, recipientID := range msg.RecipientIDs {
+		recipientSelf := recipientID == conn.me.SelfID
+		var recipient string
 		if recipientSelf {
-			// We already handle the new chat JOIN in
-			// `Connection::handleWhappMessage` in a better way.
-			// So just skip this, since otherwise we JOIN double.
-			break
+			recipient = conn.nickname
+		} else {
+			recipient = findName(recipientID)
 		}
-		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier()))
 
-	case "leave":
-		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s PART %s", recipient, chat.Identifier()))
+		switch msg.Subtype {
+		case "create":
+			break
 
-	case "remove":
-		conn.writeIRC(msg.Time(), fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
+		case "add", "invite":
+			if recipientSelf {
+				// We already handle the new chat JOIN in
+				// `Connection::handleWhappMessage` in a better way.
+				// So just skip this, since otherwise we JOIN double.
+				break
+			}
+			conn.writeIRC(msg.Time(), fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier()))
 
-	default:
-		log.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
-	}
+		case "leave":
+			conn.writeIRC(msg.Time(), fmt.Sprintf(":%s PART %s", recipient, chat.Identifier()))
 
-	if recipientSelf && (msg.Subtype == "leave" || msg.Subtype == "remove") {
-		chat.Joined = false
+		case "remove":
+			conn.writeIRC(msg.Time(), fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient))
+
+		default:
+			log.Printf("no idea what to do with notification subtype %s\n", msg.Subtype)
+		}
+
+		if recipientSelf && (msg.Subtype == "leave" || msg.Subtype == "remove") {
+			chat.Joined = false
+		}
 	}
 
 	return nil
