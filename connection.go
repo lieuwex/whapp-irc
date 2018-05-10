@@ -266,7 +266,12 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	identifier := chat.Identifier()
 
 	conn.writeIRCNow(fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier))
-	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name))
+
+	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name)
+	if desc := chat.rawChat.Description; desc != nil {
+		topic = fmt.Sprintf("%s: %s", topic, desc.Description)
+	}
+	conn.writeIRCNow(topic)
 
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
