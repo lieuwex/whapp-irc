@@ -277,6 +277,20 @@ func (p Presence) Time() time.Time {
 	return time.Unix(p.Timestamp, 0)
 }
 
+// A Description tells more about a group chat.
+type Description struct {
+	ID          string `json:"id"`
+	Description string `json:"desc"`
+	SetBy       string `json:"owner"`
+	Timestamp   int64  `json:"time"`
+}
+
+// Time returns the timestamp of the current description converted to a
+// time.Time instance.
+func (d Description) Time() time.Time {
+	return time.Unix(d.Timestamp, 0)
+}
+
 // Chat represents a chat in WhatsApp.
 type Chat struct {
 	ID                    string    `json:"id"`
@@ -288,12 +302,15 @@ type Chat struct {
 	IsReadOnly            bool      `json:"isReadOnly"`
 	ModifyTag             int       `json:"modifyTag"`
 	MuteExpiration        int       `json:"muteExpiration"`
-	Name                  string    `json:"name"`
-	NotSpam               bool      `json:"notSpam"`
-	Pin                   int       `json:"pin"`
-	Kind                  string    `json:"kind"`
-	Contact               Contact   `json:"contact"`
-	Presence              Presence  `json:"presence"`
+
+	Name        string       `json:"name"`
+	Description *Description `json:"description"`
+
+	NotSpam  bool     `json:"notSpam"`
+	Pin      int      `json:"pin"`
+	Kind     string   `json:"kind"`
+	Contact  Contact  `json:"contact"`
+	Presence Presence `json:"presence"`
 
 	IsGroupChat bool `json:"isGroup"`
 }

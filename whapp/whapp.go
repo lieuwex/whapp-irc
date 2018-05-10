@@ -298,11 +298,20 @@ func (wi *Instance) inject(ctx context.Context) error {
 			return chat;
 		}
 
+		const metadata = chat.groupMetadata && chat.groupMetadata.toJSON();
+		const description = metadata == null ? null : {
+			id: metadata.descId,
+			desc: metadata.desc,
+			owner: metadata.descOwner,
+			time: metadata.descTime,
+		};
+
 		return Object.assign(chat.toJSON(), {
 			kind: chat.kind,
 			isGroup: chat.isGroup,
 			contact: whappGo.contactToJSON(chat.contact),
-			groupMetadata: chat.groupMetadata && chat.groupMetadata.toJSON(),
+			groupMetadata: metadata,
+			description: description,
 			presence: chat.presence && whappGo.presenceToJSON(chat.presence),
 			msgs: null,
 		});
