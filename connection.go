@@ -269,7 +269,10 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name)
 	if desc := chat.rawChat.Description; desc != nil {
-		topic = fmt.Sprintf("%s: %s", topic, desc.Description)
+		if d := strings.TrimSpace(desc.Description); d != "" {
+			d = strings.Replace(d, "\n", " ", -1)
+			topic = fmt.Sprintf("%s: %s", topic, d)
+		}
 	}
 	conn.writeIRCNow(topic)
 
