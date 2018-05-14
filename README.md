@@ -9,6 +9,7 @@ _a simple whatsapp web <-> irc gateway_
 - joining chats;
 - converts names to irc safe names as much as possible;
 - receiving files, hosts it as using a HTTP file server;
+- receiving locations, will send a Google Maps link to the location;
 - receiving reply messages;
 - generating QR code;
 - saves login state to disk;
@@ -16,6 +17,24 @@ _a simple whatsapp web <-> irc gateway_
 - IRCv3 `server-time` support;
 - no configuration needed;
 - probably some stuff I forgot.
+
+## configuration
+### irc client
+To use whapp-irc optimally you should set the following client capabilities:
+- `server-time` (this will show the time when the message was sent in whatsapp
+	in your IRC client, instead of when the bridge received it);
+- `whapp-irc/replay` (this will replay all the messages the bridge missed, for
+	example: when the bridge is turned off. The bridges stores the timestamp of
+	the last message for every chat on disk and will send all newer messages to
+	the client).
+
+### environment variables
+All configuration is done using environment variables.
+Quick and simple.
+- `HOST`: the IP/domain used to generate the URLs to media files;
+- `FILE_SERVER_PORT`: the port used for the file httpserver, if not 80 it will
+	be appended to the URLs;
+- `IRC_SERVER_PORT`: the port to listen on for IRC connections.
 
 ## docker
 It's recommend to use the docker image.
@@ -33,7 +52,7 @@ docker run -d \
 	lieuwex/whapp-irc
 ```
 
-## installation
+## local build
 make sure you have go and dep, then clone the repo in your `$GOPATH` and:
 ```shell
 dep ensure
