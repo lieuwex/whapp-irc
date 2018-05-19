@@ -110,8 +110,7 @@ func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, err
 // the current instance.
 func (wi *Instance) SetLocalStorage(ctx context.Context, localStorage map[string]string) error {
 	var idc []byte
-
-	tasks := chromedp.Tasks{chromedp.Navigate(url)}
+	var tasks chromedp.Tasks
 
 	for key, val := range localStorage {
 		str := fmt.Sprintf("localStorage.setItem(%s, %s)", strconv.Quote(key), strconv.Quote(val))
