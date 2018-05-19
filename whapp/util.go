@@ -24,6 +24,8 @@ func downloadFile(url string) ([]byte, error) {
 }
 
 func runLoggedinWithoutRes(ctx context.Context, wi *Instance, code string) error {
+	// REVIEW: find some better way than 'idc'
+
 	if wi.LoginState != Loggedin {
 		return ErrLoggedOut
 	}

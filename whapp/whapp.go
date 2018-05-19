@@ -534,20 +534,8 @@ func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duratio
 // `chatID`.
 func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {
 	// REVIEW: make this safe.
-	// REVIEW: find some better way than 'idc'
-
-	if wi.LoginState != Loggedin {
-		return ErrLoggedOut
-	}
-
-	if err := wi.inject(ctx); err != nil {
-		return err
-	}
-
 	str := fmt.Sprintf("whappGo.sendMessage(%s, %s)", strconv.Quote(chatID), strconv.Quote(message))
-
-	var idc []byte
-	return wi.cdp.Run(ctx, chromedp.Evaluate(str, &idc))
+	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
 // GetAllChats returns a slice containing all the chats the user has
