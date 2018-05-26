@@ -165,7 +165,11 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 		return res, ErrLoggedOut
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
+	if err := wi.inject(ctx); err != nil {
+		return res, err
+	}
+
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getConnection().toJSON()", &res))
 	if err != nil {
 		return res, err
 	}
@@ -174,8 +178,12 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 }
 
 func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
+	if err := wi.inject(ctx); err != nil {
+		return false, err
+	}
+
 	var res bool
-	action := chromedp.Evaluate("Store.Conn.clientToken != null", &res)
+	action := chromedp.Evaluate("whappGo.getConnection().clientToken != null", &res)
 	return res, wi.cdp.Run(ctx, action)
 }
 
@@ -227,6 +235,25 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 	script := `
 	var whappGo = {};
+
+	// HACK
+	whappGo.getChatCollection = function () {
+		return document.querySelector("#app")._reactRootContainer.current.child
+			.child.child.child.child.child.sibling.sibling.sibling.sibling.sibling
+			.child.child.child.child.child.sibling.sibling.sibling.sibling.sibling
+			.child.child.child.child.memoizedState.chats[0].collection;
+	};
+	whappGo.getContactCollection = function () {
+		return whappGo.getChatCollection().models[0].contact.collection;
+	};
+	whappGo.getMessageCollection = function () {
+		return whappGo.getChatCollection().models[0].msgs.models[0].collection;
+	};
+	whappGo.getConnection = function () {
+		return document.querySelector("#app")._reactRootContainer.current.child
+			.child.child.child.child.child.sibling.sibling.sibling.sibling
+			.sibling.memoizedProps.conn;
+	};
 
 	whappGo.contactToJSON = function (contact) {
 		if (contact == null) {
@@ -338,7 +365,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 	}
 
 	whappGo.getNewMessages = function () {
-		const chats = Store.Chat.models;
+		const chats = whappGo.getChatCollection().models;
 		let res = [];
 
 		for (const chat of chats) {
@@ -385,7 +412,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		};
 		*/
 
-		const chat = Store.Chat.models.find(c => c.id === id);
+		const chat = whappGo.getChatCollection().models.find(c => c.id === id);
 		if (chat == null) {
 			throw new Error('no chat with id ' + id + ' found.');
 		}
@@ -421,7 +448,9 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getGroupParticipants = async function (id) {
-		const res = Store.GroupMetadata.models.find(md => md.id === id);
+		const chat = whappGo.getChatCollection().models.find(c => c.id === id);
+		const res = chat.groupMetadata;
+		//const res = Store.GroupMetadata.models.find(md => md.id === id);
 
 		// TODO: user should be able to just get the stale one and call
 		// .Update() in the go code.
@@ -433,21 +462,23 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getAllChats = function () {
-		return Store.Chat.models.map(c => whappGo.chatToJSON(c));
+		return whappGo.getChatCollection().models.map(c => whappGo.chatToJSON(c));
 	};
 
 	whappGo.getPresence = async function (chatId) {
+		return undefined;
 		const res = Store.Presence.models.find(p => p.id === chatId);
 		await res.update();
 		return whappGo.presenceToJSON(res);
 	}
 
 	whappGo.getPhoneActive = function () {
+		return true;
 		return Store.Stream.phoneActive;
 	};
 
 	whappGo.getMessagesFromChatTillDate = async function (chatID, timestamp) {
-		const chat = Store.Chat.models.find(c => c.id === chatID);
+		const chat = whappGo.getChatCollection().models.find(c => c.id === chatID);
 
 		while (
 			chat.msgs.models[0].t > timestamp &&
