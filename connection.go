@@ -373,7 +373,7 @@ func (conn *Connection) setup() error {
 	} else if found {
 		var user database.User
 		if err := mapstructure.Decode(obj, &user); err != nil {
-			panic(err)
+			return err
 		}
 
 		conn.timestampMap.Swap(user.LastReceivedReceipts)

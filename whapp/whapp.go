@@ -149,9 +149,8 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 // WaitLogin waits until the current instance has been done logging in. (the
 // user scanned the QR code and is accepted)
 func (wi *Instance) WaitLogin(ctx context.Context) error {
-	err := wi.cdp.Run(ctx, chromedp.WaitVisible("._3ZW2E"))
-	if err != nil {
-		panic(err)
+	if err := wi.cdp.Run(ctx, chromedp.WaitVisible("._3ZW2E")); err != nil {
+		return err
 	}
 	wi.LoginState = Loggedin
 	return nil
