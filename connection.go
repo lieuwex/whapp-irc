@@ -389,7 +389,6 @@ func (conn *Connection) setup() error {
 		return err
 	}
 
-	var qrFile *File
 	if state == whapp.Loggedout {
 		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
 		if err != nil {
@@ -401,10 +400,15 @@ func (conn *Connection) setup() error {
 			return err
 		}
 
-		qrFile, err = fs.AddBlob("qr-"+strTimestamp(), "png", bytes)
+		qrFile, err := fs.AddBlob("qr-"+strTimestamp(), "png", bytes)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if err = fs.RemoveFile(qrFile); err != nil {
+				log.Printf("error while removing QR code: %s\n", err.Error())
+			}
+		}()
 
 		conn.status("Scan this QR code: " + qrFile.URL)
 	}
@@ -420,12 +424,6 @@ func (conn *Connection) setup() error {
 	} else {
 		if err := conn.saveDatabaseEntry(); err != nil {
 			return err
-		}
-	}
-
-	if qrFile != nil {
-		if err = fs.RemoveFile(qrFile); err != nil {
-			log.Printf("error while removing QR code: %s\n", err.Error())
 		}
 	}
 
