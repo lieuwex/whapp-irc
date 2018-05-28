@@ -367,6 +367,11 @@ func (conn *Connection) setup() error {
 		return err
 	}
 
+	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
+	if err != nil {
+		return err
+	}
+
 	obj, found, err := userDb.GetItem(conn.nickname)
 	if err != nil {
 		return err
@@ -382,11 +387,6 @@ func (conn *Connection) setup() error {
 		if err != nil {
 			log.Printf("error while setting local storage: %s\n", err.Error())
 		}
-	}
-
-	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
-	if err != nil {
-		return err
 	}
 
 	if state == whapp.Loggedout {
