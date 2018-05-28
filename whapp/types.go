@@ -2,7 +2,6 @@ package whapp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -380,8 +379,6 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 // SetAdmin sets the admin state of the user with given userID in the current
 // chat.
 func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmin bool) error {
-	return errors.New("broken")
-
 	var fun string
 	if setAdmin {
 		fun = "promoteParticipant"
@@ -395,8 +392,6 @@ func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmi
 
 // AddParticipant adds the user with the given userID to the current chat.
 func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID string) error {
-	return errors.New("broken")
-
 	str := fmt.Sprintf("Store.Wap.addParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
@@ -404,8 +399,6 @@ func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID string) e
 // RemoveParticipant removes the user with the given userID from the current
 // chat.
 func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID string) error {
-	return errors.New("broken")
-
 	str := fmt.Sprintf("Store.Wap.removeParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
 	return runLoggedinWithoutRes(ctx, wi, str)
 }

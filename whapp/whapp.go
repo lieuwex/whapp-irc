@@ -81,8 +81,12 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	} else {
 		state = Loggedout
 	}
-
 	wi.LoginState = state
+
+	if err := wi.inject(ctx); err != nil {
+		return state, err
+	}
+
 	return state, nil
 }
 
@@ -168,7 +172,7 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 		return res, err
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getConnection().toJSON()", &res))
+	err := wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
 	if err != nil {
 		return res, err
 	}
@@ -177,12 +181,13 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 }
 
 func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
+	var res bool
+
 	if err := wi.inject(ctx); err != nil {
-		return false, err
+		return res, err
 	}
 
-	var res bool
-	action := chromedp.Evaluate("whappGo.getConnection().clientToken != null", &res)
+	action := chromedp.Evaluate("Store.Conn.clientToken != null", &res)
 	return res, wi.cdp.Run(ctx, action)
 }
 
@@ -235,23 +240,21 @@ func (wi *Instance) inject(ctx context.Context) error {
 	script := `
 	var whappGo = {};
 
-	// HACK
-	whappGo.getChatCollection = function () {
-		return document.querySelector("#app")._reactRootContainer.current.child
-			.child.child.child.child.child.sibling.sibling.sibling.sibling.sibling
-			.child.child.child.child.child.sibling.sibling.sibling.sibling.sibling
-			.child.child.child.child.memoizedState.chats[0].collection;
-	};
-	whappGo.getContactCollection = function () {
-		return whappGo.getChatCollection().models[0].contact.collection;
-	};
-	whappGo.getMessageCollection = function () {
-		return whappGo.getChatCollection().models[0].msgs.models[0].collection;
-	};
-	whappGo.getConnection = function () {
-		return document.querySelector("#app")._reactRootContainer.current.child
-			.child.child.child.child.child.sibling.sibling.sibling.sibling
-			.sibling.memoizedProps.conn;
+	whappGo.setupStore = async function () {
+		const fetchWebpack = function (id) {
+			return Promise.resolve(function (resolve) {
+				var obj = {};
+				obj[id] = function (x, y, z) {
+					resolve(z('"' + id + '"'));
+				};
+				webpackJsonp([], obj, id);
+			});
+		};
+
+		window.Store = await fetchWebpack('bcihgfbdeb');
+		window.Store.Wap = await fetchWebpack('dgfhfgbdeb');
+		window.Store.Conn = (await fetchWebpack('jfefjijii')).default;
+		window.Store.Stream = (await fetchWebpack('djddhaidag')).default;
 	};
 
 	whappGo.contactToJSON = function (contact) {
@@ -364,7 +367,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 	}
 
 	whappGo.getNewMessages = function () {
-		const chats = whappGo.getChatCollection().models;
+		const chats = Store.Chat.models;
 		let res = [];
 
 		for (const chat of chats) {
@@ -411,7 +414,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		};
 		*/
 
-		const chat = whappGo.getChatCollection().models.find(c => c.id === id);
+		const chat = Store.Chat.models.find(c => c.id === id);
 		if (chat == null) {
 			throw new Error('no chat with id ' + id + ' found.');
 		}
@@ -447,9 +450,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getGroupParticipants = async function (id) {
-		const chat = whappGo.getChatCollection().models.find(c => c.id === id);
-		const res = chat.groupMetadata;
-		//const res = Store.GroupMetadata.models.find(md => md.id === id);
+		const res = Store.GroupMetadata.models.find(md => md.id === id);
 
 		// TODO: user should be able to just get the stale one and call
 		// .Update() in the go code.
@@ -461,23 +462,21 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getAllChats = function () {
-		return whappGo.getChatCollection().models.map(c => whappGo.chatToJSON(c));
+		return Store.Chat.models.map(c => whappGo.chatToJSON(c));
 	};
 
 	whappGo.getPresence = async function (chatId) {
-		return undefined;
 		const res = Store.Presence.models.find(p => p.id === chatId);
 		await res.update();
 		return whappGo.presenceToJSON(res);
 	}
 
 	whappGo.getPhoneActive = function () {
-		return true;
 		return Store.Stream.phoneActive;
 	};
 
 	whappGo.getMessagesFromChatTillDate = async function (chatID, timestamp) {
-		const chat = whappGo.getChatCollection().models.find(c => c.id === chatID);
+		const chat = Store.Chat.models.find(c => c.id === chatID);
 
 		while (
 			chat.msgs.models[0].t > timestamp &&
@@ -495,6 +494,13 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 	var idc []byte
 	if err := wi.cdp.Run(ctx, chromedp.Evaluate(script, &idc)); err != nil {
+		return err
+	}
+
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("whappGo.setupStore()", &idc, awaitPromise),
+	); err != nil {
 		return err
 	}
 
