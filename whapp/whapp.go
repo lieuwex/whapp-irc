@@ -242,7 +242,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 	whappGo.setupStore = async function () {
 		const fetchWebpack = function (id) {
-			return Promise.resolve(function (resolve) {
+			return new Promise(function (resolve) {
 				var obj = {};
 				obj[id] = function (x, y, z) {
 					resolve(z('"' + id + '"'));
