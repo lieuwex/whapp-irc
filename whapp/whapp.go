@@ -81,12 +81,8 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	} else {
 		state = Loggedout
 	}
+
 	wi.LoginState = state
-
-	if err := wi.inject(ctx); err != nil {
-		return state, err
-	}
-
 	return state, nil
 }
 
