@@ -100,6 +100,23 @@ func (c Contact) GetName() string {
 	return str
 }
 
+func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, error) {
+	var res []Chat
+
+	if wi.LoginState != Loggedin {
+		return res, ErrLoggedOut
+	}
+
+	if err := wi.inject(ctx); err != nil {
+		return res, err
+	}
+
+	str := fmt.Sprintf("whappGo.getCommonGroups(%s)", strconv.Quote(c.ID))
+
+	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
+	return res, err
+}
+
 // Participant represents a participants in a group chat.
 type Participant struct {
 	ID      string  `json:"id"`

@@ -320,7 +320,7 @@ func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 	return nil
 }
 
-func (conn *Connection) addChat(chat whapp.Chat) (*Chat, error) {
+func (conn *Connection) convertChat(chat whapp.Chat) (*Chat, error) {
 	participants, err := chat.Participants(conn.bridge.ctx, conn.bridge.WI)
 	if err != nil {
 		return nil, err
@@ -331,7 +331,7 @@ func (conn *Connection) addChat(chat whapp.Chat) (*Chat, error) {
 		converted[i] = Participant(p)
 	}
 
-	res := &Chat{
+	return &Chat{
 		ID:   chat.ID,
 		Name: chat.Title(),
 
@@ -342,22 +342,29 @@ func (conn *Connection) addChat(chat whapp.Chat) (*Chat, error) {
 		MessageIDs: make([]string, 0),
 
 		rawChat: chat,
+	}, nil
+}
+
+func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
+	chat, err := conn.convertChat(rawChat)
+	if err != nil {
+		return nil, err
 	}
 
 	if chat.IsGroupChat {
-		log.Printf("%-30s %3d participants\n", res.Identifier(), len(res.Participants))
+		log.Printf("%-30s %3d participants\n", chat.Identifier(), len(chat.Participants))
 	} else {
-		log.Println(res.Identifier())
+		log.Println(chat.Identifier())
 	}
 
 	for i, c := range conn.Chats {
 		if c.ID == chat.ID {
-			conn.Chats[i] = res
-			return res, nil
+			conn.Chats[i] = chat
+			return chat, nil
 		}
 	}
-	conn.Chats = append(conn.Chats, res)
-	return res, nil
+	conn.Chats = append(conn.Chats, chat)
+	return chat, nil
 }
 
 // TODO: check if already setup

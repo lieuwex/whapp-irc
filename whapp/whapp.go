@@ -486,6 +486,17 @@ func (wi *Instance) inject(ctx context.Context) error {
 			.filter(m => m.t >= timestamp)
 			.map(whappGo.msgToJSON);
 	};
+
+	whappGo.getCommonGroups = async function (contactID) {
+		const contact = Store.Contact.models.find(c => c.id === contactID);
+		await contact.findCommonGroups();
+
+		if (contact.commonGroups == null) {
+			return [];
+		}
+
+		return contact.commonGroups.models.map(whappGo.chatToJSON);
+	}
 	`
 
 	var idc []byte

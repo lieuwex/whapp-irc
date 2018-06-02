@@ -211,6 +211,34 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		}
 		write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
 
+	case "WHOIS": // TODO: fix
+		chat := conn.GetChatByIdentifier(msg.Params[0])
+		if chat == nil || chat.IsGroupChat {
+			write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, msg.Params[0]))
+			return
+		}
+		identifier := chat.Identifier()
+
+		write(fmt.Sprintf(":whapp-irc 311 %s %s ~%s whapp-irc * :%s", conn.nickname, identifier, identifier, chat.Name))
+
+		if groups, err := chat.rawChat.Contact.GetCommonGroups(
+			conn.bridge.ctx,
+			conn.bridge.WI,
+		); err == nil {
+			names := make([]string, len(groups))
+			for i, group := range groups {
+				chat, err := conn.convertChat(group)
+				if err != nil {
+					continue
+				}
+
+				names[i] = chat.Identifier()
+			}
+			write(fmt.Sprintf(":whapp-irc 319 %s %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
+		}
+
+		write(fmt.Sprintf(":whapp-irc 318 %s %s :End of /WHOIS list.", conn.nickname, identifier))
+
 	case "KICK":
 		chatIdentifier := msg.Params[0]
 		nick := strings.ToLower(msg.Params[1])
