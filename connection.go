@@ -369,13 +369,7 @@ func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
 
 // TODO: check if already setup
 func (conn *Connection) setup() error {
-	_, err := conn.bridge.Start()
-	if err != nil {
-		return err
-	}
-
-	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
-	if err != nil {
+	if _, err := conn.bridge.Start(); err != nil {
 		return err
 	}
 
@@ -390,15 +384,21 @@ func (conn *Connection) setup() error {
 
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
 
-		err := conn.bridge.WI.SetLocalStorage(conn.bridge.ctx, user.LocalStorage)
-		if err != nil {
-			log.Printf("error while setting local storage: %s\n", err.Error())
-		}
-
-		state, err = conn.bridge.WI.Open(conn.bridge.ctx)
-		if err != nil {
+		if _, err := conn.bridge.WI.Open(conn.bridge.ctx); err != nil {
 			return err
 		}
+
+		if err := conn.bridge.WI.SetLocalStorage(
+			conn.bridge.ctx,
+			user.LocalStorage,
+		); err != nil {
+			log.Printf("error while setting local storage: %s\n", err.Error())
+		}
+	}
+
+	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
+	if err != nil {
+		return err
 	}
 
 	if state == whapp.Loggedout {
