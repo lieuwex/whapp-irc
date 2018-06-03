@@ -367,13 +367,20 @@ func (wi *Instance) inject(ctx context.Context) error {
 		let res = [];
 
 		for (const chat of chats) {
+			if (chat == null) {
+				continue;
+			}
+
 			const messages = chat.msgs.models;
 			for (let i = messages.length - 1; i >= 0; i--) {
 				let msg = messages[i];
+				if (msg == null) {
+					continue;
+				}
+
 				if (!msg.isNewMsg) {
 					break;
 				}
-
 				msg.isNewMsg = false;
 
 				if (
@@ -496,7 +503,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		}
 
 		return contact.commonGroups.models.map(whappGo.chatToJSON);
-	}
+	};
 	`
 
 	var idc []byte
