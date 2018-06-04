@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/avast/retry-go"
   packages = ["."]
-  revision = "5469272a8171235352a56af37e5f7facf814423f"
-  version = "1.0.1"
+  revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
+  version = "1.0.2"
 
 [[projects]]
   branch = "master"
@@ -51,7 +51,7 @@
     "tethering",
     "tracing"
   ]
-  revision = "ad3a5240868fb8286c9b79ae4138abf87995ad9d"
+  revision = "55db67b53f25ccea966f55081b17c1a801a1c109"
 
 [[projects]]
   branch = "master"
@@ -62,13 +62,13 @@
     "kb",
     "runner"
   ]
-  revision = "f683cfc4c190d6a24ca66ee436184b533fd126b8"
+  revision = "68c34da207ddddcc114a607e0a1555dbcf337a01"
 
 [[projects]]
   name = "github.com/disintegration/imaging"
   packages = ["."]
-  revision = "fd34ef7671b12cdf1b024d98c6b327b2770d32c4"
-  version = "v1.4.1"
+  revision = "bbcee2f5c9d5e94ca42c8b50ec847fec64a6c134"
+  version = "v1.4.2"
 
 [[projects]]
   name = "github.com/gorilla/websocket"
@@ -103,13 +103,13 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+  revision = "9825584555aa620c53c265d4a09ace0df1346fd9"
 
 [[projects]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
+  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
 
 [[projects]]
   name = "github.com/mozillazg/go-unidecode"
@@ -134,7 +134,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["hkdf"]
-  revision = "e73bf333ef8920dbb52ad18d4bd38ad9d9bc76d7"
+  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
 
 [[projects]]
   branch = "master"
@@ -144,7 +144,7 @@
     "tiff",
     "tiff/lzw"
   ]
-  revision = "f315e440302883054d0c2bd85486878cb4f8572c"
+  revision = "af66defab954cb421ca110193eed9477c8541e2a"
 
 [[projects]]
   name = "gopkg.in/h2non/filetype.v1"
