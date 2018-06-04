@@ -79,6 +79,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		for {
 			msg, err := decoder.Decode()
 			if err != nil {
+				log.Printf("error while listening for IRC messages: %s\n", err)
 				return
 			}
 
@@ -136,7 +137,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			case msg, ok := <-ircCh:
 				if !ok {
-					log.Println("error while listening for IRC messages")
 					return
 				}
 
