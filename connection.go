@@ -67,6 +67,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	conn.socket = socket
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// listen for and parse messages.
 	// we want to do this outside the next irc message handle loop, so we can
@@ -190,7 +191,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		)
 		if err != nil {
 			log.Printf("error while loading earlier messages: %s\n", err.Error())
-			continue
+			return err
 		}
 
 		for _, msg := range messages {
@@ -200,7 +201,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			if err := conn.handleWhappMessage(msg); err != nil {
 				log.Printf("error handling older whapp message: %s\n", err.Error())
-				continue
+				return err
 			}
 		}
 	}
