@@ -56,7 +56,7 @@ func (conn *Connection) HasCapability(cap string) bool {
 	return false
 }
 
-func (conn *Connection) handleIRCCommand(msg *irc.Message) {
+func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 	write := conn.writeIRCNow
 	status := conn.status
 
@@ -95,13 +95,12 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		logMessage(time.Now(), conn.nickname, to, body)
 
 		if to == "status" {
-			return
+			return nil
 		}
 
 		chat := conn.GetChatByIdentifier(to)
 		if chat == nil {
-			status("unknown chat")
-			return
+			return status("unknown chat")
 		}
 
 		cid := chat.ID
@@ -115,12 +114,11 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		for _, ident := range idents {
 			chat := conn.GetChatByIdentifier(ident)
 			if chat == nil {
-				status("chat not found: " + msg.Params[0])
-				return
+				return status("chat not found: " + msg.Params[0])
 			}
 			err := conn.joinChat(chat)
 			if err != nil {
-				status("error while joining: " + err.Error())
+				return status("error while joining: " + err.Error())
 			}
 		}
 
@@ -129,8 +127,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 		for _, ident := range idents {
 			chat := conn.GetChatByIdentifier(ident)
 			if chat == nil {
-				status("unknown chat")
-				return
+				return status("unknown chat")
 			}
 
 			// TODO: some way that we don't rejoin a person later.
@@ -139,7 +136,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 
 	case "MODE":
 		if len(msg.Params) != 3 {
-			return
+			return nil
 		}
 
 		ident := msg.Params[0]
@@ -148,26 +145,24 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 
 		chat := conn.GetChatByIdentifier(ident)
 		if chat == nil {
-			status("chat not found")
-			return
+			return status("chat not found")
 		} else if mode != "+o" {
-			return
+			return nil
 		}
 
 		for _, p := range chat.Participants {
-			if strings.ToLower(p.SafeName()) == nick {
-				err := chat.rawChat.SetAdmin(conn.bridge.ctx, conn.bridge.WI, p.ID, true)
-				if err != nil {
-					str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
-					status(str)
-					log.Println(str)
-					break
-				}
-
-				write(fmt.Sprintf(":%s MODE %s +o %s", conn.nickname, ident, nick))
-
-				break
+			if strings.ToLower(p.SafeName()) != nick {
+				continue
 			}
+
+			err := chat.rawChat.SetAdmin(conn.bridge.ctx, conn.bridge.WI, p.ID, true)
+			if err != nil {
+				str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
+				log.Println(str)
+				return status(str)
+			}
+
+			return write(fmt.Sprintf(":%s MODE %s +o %s", conn.nickname, ident, nick))
 		}
 
 	case "LIST":
@@ -206,7 +201,9 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 					presenceStamp,
 					p.FullName(),
 				)
-				write(msg)
+				if err := write(msg); err != nil {
+					return err
+				}
 			}
 		}
 		write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
@@ -214,8 +211,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 	case "WHOIS": // TODO: fix
 		chat := conn.GetChatByIdentifier(msg.Params[0])
 		if chat == nil || chat.IsGroupChat {
-			write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, msg.Params[0]))
-			return
+			return write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, msg.Params[0]))
 		}
 		identifier := chat.Identifier()
 
@@ -245,20 +241,22 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 
 		chat := conn.GetChatByIdentifier(chatIdentifier)
 		if chat == nil || !chat.IsGroupChat {
-			write(fmt.Sprintf(":whapp-irc 403 %s %s :No such channel", conn.nickname, chatIdentifier))
-			return
+			return write(fmt.Sprintf(":whapp-irc 403 %s %s :No such channel", conn.nickname, chatIdentifier))
 		}
 
 		for _, p := range chat.Participants {
-			if strings.ToLower(p.SafeName()) == nick {
-				err := chat.rawChat.RemoveParticipant(conn.bridge.ctx, conn.bridge.WI, p.ID)
-				if err != nil {
-					str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
-					status(str)
-					log.Println(str)
-				}
-				break
+			if strings.ToLower(p.SafeName()) != nick {
+				continue
 			}
+
+			err := chat.rawChat.RemoveParticipant(conn.bridge.ctx, conn.bridge.WI, p.ID)
+			if err != nil {
+				str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
+				log.Println(str)
+				return status(str)
+			}
+
+			return nil
 		}
 
 	case "INVITE":
@@ -267,21 +265,20 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) {
 
 		chat := conn.GetChatByIdentifier(chatIdentifier)
 		if chat == nil || !chat.IsGroupChat {
-			write(fmt.Sprintf(":whapp-irc 442 %s %s :You're not on that channel", conn.nickname, chatIdentifier))
-			return
+			return write(fmt.Sprintf(":whapp-irc 442 %s %s :You're not on that channel", conn.nickname, chatIdentifier))
 		}
 		personChat := conn.GetChatByIdentifier(nick)
 		if personChat == nil || personChat.IsGroupChat {
-			write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, nick))
-			return
+			return write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, nick))
 		}
 
 		err := chat.rawChat.AddParticipant(conn.bridge.ctx, conn.bridge.WI, personChat.ID)
 		if err != nil {
 			str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
-			status(str)
 			log.Println(str)
-			break
+			return status(str)
 		}
 	}
+
+	return nil
 }

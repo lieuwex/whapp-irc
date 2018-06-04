@@ -64,8 +64,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	defer conn.bridge.Stop()
 
 	conn.socket = socket
-	write := conn.writeIRCNow
-	status := conn.status
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -84,7 +82,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 
 			if msg.Command == "PING" {
-				write(":whapp-irc PONG whapp-irc :" + msg.Params[0])
+				str := ":whapp-irc PONG whapp-irc :" + msg.Params[0]
+				if err := conn.writeIRCNow(str); err != nil {
+					return
+				}
 				continue
 			}
 
@@ -97,8 +98,14 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			return false, nil
 		}
 
-		conn.writeIRCNow(fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname))
-		conn.writeIRCNow(fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname))
+		str := fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname)
+		if err := conn.writeIRCNow(str); err != nil {
+			return false, err
+		}
+		str = fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname)
+		if err := conn.writeIRCNow(str); err != nil {
+			return false, err
+		}
 
 		conn.welcomed = true
 
@@ -135,13 +142,16 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				if msg.Command == "NICK" {
 					conn.nickname = msg.Params[0]
 					if _, err := welcome(); err != nil {
-						status("giving up trying to setup whapp bridge: " + err.Error())
+						conn.status("giving up trying to setup whapp bridge: " + err.Error())
 						return
 					}
 					continue
 				}
 
-				conn.handleIRCCommand(msg)
+				if err := conn.handleIRCCommand(msg); err != nil {
+					log.Printf("error handling new irc message: %s\n", err)
+					continue
+				}
 			}
 		}
 	}()
@@ -265,7 +275,10 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 	identifier := chat.Identifier()
 
-	conn.writeIRCNow(fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier))
+	str := fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier)
+	if err := conn.writeIRCNow(str); err != nil {
+		return err
+	}
 
 	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name)
 	if desc := chat.rawChat.Description; desc != nil {
@@ -274,7 +287,9 @@ func (conn *Connection) joinChat(chat *Chat) error {
 			topic = fmt.Sprintf("%s: %s", topic, d)
 		}
 	}
-	conn.writeIRCNow(topic)
+	if err := conn.writeIRCNow(topic); err != nil {
+		return err
+	}
 
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
@@ -293,8 +308,14 @@ func (conn *Connection) joinChat(chat *Chat) error {
 		names = append(names, prefix+participant.SafeName())
 	}
 
-	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
-	conn.writeIRCNow(fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.nickname, identifier))
+	str = fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " "))
+	if err := conn.writeIRCNow(str); err != nil {
+		return err
+	}
+	str = fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.nickname, identifier)
+	if err := conn.writeIRCNow(str); err != nil {
+		return err
+	}
 
 	chat.Joined = true
 	return nil
@@ -422,7 +443,9 @@ func (conn *Connection) setup() error {
 			}
 		}()
 
-		conn.status("Scan this QR code: " + qrFile.URL)
+		if err := conn.status("Scan this QR code: " + qrFile.URL); err != nil {
+			return err
+		}
 	}
 
 	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
