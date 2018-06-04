@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net"
@@ -150,6 +151,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 				if err := conn.handleIRCCommand(msg); err != nil {
 					log.Printf("error handling new irc message: %s\n", err)
+
+					if err == io.ErrClosedPipe {
+						return
+					}
 					continue
 				}
 			}
