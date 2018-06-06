@@ -4,22 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/runner"
-)
-
-// LoginState represents the login state of an Instance.
-type LoginState int
-
-const (
-	// Loggedout is the state of a logged out instance.
-	Loggedout LoginState = iota
-	// Loggedin is the state of a logged in instance.
-	Loggedin = iota
 )
 
 // Instance is an instance to Whatsapp Web.
@@ -31,7 +22,12 @@ type Instance struct {
 }
 
 // MakeInstance makes a new Instance.
-func MakeInstance(ctx context.Context, chromePath string, headless bool) (*Instance, error) {
+func MakeInstance(
+	ctx context.Context,
+	chromePath string,
+	headless bool,
+	loggingLevel LoggingLevel,
+) (*Instance, error) {
 	options := chromedp.WithRunnerOptions(
 		runner.Path(chromePath),
 		runner.Port(9222),
@@ -49,7 +45,14 @@ func MakeInstance(ctx context.Context, chromePath string, headless bool) (*Insta
 		runner.UserAgent(userAgent),
 	)
 
-	cdp, err := chromedp.New(ctx, options)
+	var cdp *chromedp.CDP
+	var err error
+	switch loggingLevel {
+	case LogLevelVerbose:
+		cdp, err = chromedp.New(ctx, options, chromedp.WithLog(log.Printf))
+	default:
+		cdp, err = chromedp.New(ctx, options)
+	}
 	if err != nil {
 		return nil, err
 	}

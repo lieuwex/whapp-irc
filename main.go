@@ -4,17 +4,21 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"whapp-irc/database"
+	"whapp-irc/whapp"
 )
 
 const (
 	defaultHost           = "localhost"
 	defaultFileServerPort = "3000"
 	defaultIRCPort        = "6060"
+	defaultLoggingLevel   = "normal"
 )
 
 var fs *FileServer
 var userDb *database.Database
+var loggingLevel whapp.LoggingLevel
 
 func handleSocket(socket *net.TCPConn) {
 	conn, err := MakeConnection()
@@ -24,20 +28,38 @@ func handleSocket(socket *net.TCPConn) {
 	go conn.BindSocket(socket)
 }
 
-func main() {
-	host := os.Getenv("HOST")
+func parseEnvVars() (host, fileServerPort, ircPort, logLevel string) {
+	host = os.Getenv("HOST")
 	if host == "" {
 		host = defaultHost
 	}
 
-	fileServerPort := os.Getenv("FILE_SERVER_PORT")
+	fileServerPort = os.Getenv("FILE_SERVER_PORT")
 	if fileServerPort == "" {
 		fileServerPort = defaultFileServerPort
 	}
 
-	ircPort := os.Getenv("IRC_SERVER_PORT")
+	ircPort = os.Getenv("IRC_SERVER_PORT")
 	if ircPort == "" {
 		ircPort = defaultIRCPort
+	}
+
+	logLevel = os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = defaultLoggingLevel
+	}
+
+	return
+}
+
+func main() {
+	host, fileServerPort, ircPort, levelRaw := parseEnvVars()
+
+	switch strings.ToLower(levelRaw) {
+	case "verbose":
+		loggingLevel = whapp.LogLevelVerbose
+	default:
+		loggingLevel = whapp.LogLevelNormal
 	}
 
 	var err error
