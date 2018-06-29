@@ -70,12 +70,11 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	var state LoginState
 	var loggedIn bool
 
-	err := wi.cdp.Run(ctx, chromedp.Tasks{
+	if err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
-	})
-	if err != nil {
+	}); err != nil {
 		return state, err
 	}
 
@@ -94,18 +93,15 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 // This method expects you to already have Whatsapp Web open.
 func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
 	var str string
-
 	err := wi.cdp.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
 	if err != nil {
 		return nil, err
 	}
 
 	var res map[string]string
-
 	if err := json.Unmarshal([]byte(str), &res); err != nil {
 		return nil, err
 	}
-
 	return res, err
 }
 

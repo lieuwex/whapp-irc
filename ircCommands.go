@@ -86,8 +86,8 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 	case "PRIVMSG":
 		to := msg.Params[0]
-		body := msg.Params[1]
 
+		body := msg.Params[1]
 		if tag, text, ok := ctcp.Decode(msg.Trailing()); ok && tag == ctcp.ACTION {
 			body = fmt.Sprintf("_%s_", text)
 		}
@@ -103,9 +103,11 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			return status("unknown chat")
 		}
 
-		cid := chat.ID
-		err := conn.bridge.WI.SendMessageToChatID(conn.bridge.ctx, cid, body)
-		if err != nil {
+		if err := conn.bridge.WI.SendMessageToChatID(
+			conn.bridge.ctx,
+			chat.ID,
+			body,
+		); err != nil {
 			log.Printf("err while sending %s\n", err.Error())
 		}
 
