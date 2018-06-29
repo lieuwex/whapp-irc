@@ -1,4 +1,4 @@
-package main
+package files
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 type File struct {
@@ -19,9 +20,10 @@ type FileServer struct {
 	Port      string
 	Directory string
 
-	HashToPath map[string]*File
-
 	httpServer *http.Server
+
+	mutex      sync.RWMutex
+	hashToPath map[string]*File
 }
 
 func MakeFileServer(host, port, dir string) (*FileServer, error) {
@@ -30,7 +32,7 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 		Port:      port,
 		Directory: dir,
 
-		HashToPath: make(map[string]*File),
+		hashToPath: make(map[string]*File),
 	}
 
 	err := os.Mkdir("./"+dir, 0700)
@@ -67,7 +69,7 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 				continue
 			}
 
-			fs.HashToPath[hash] = fs.MakeFile(hash, ext)
+			fs.hashToPath[hash] = fs.makeFile(hash, ext)
 		}
 	}
 
@@ -93,7 +95,7 @@ func (fs *FileServer) Stop() error {
 	return nil
 }
 
-func (fs *FileServer) MakeFile(hash, ext string) *File {
+func (fs *FileServer) makeFile(hash, ext string) *File {
 	if hash == "" {
 		return nil
 	}
@@ -127,11 +129,14 @@ func (fs *FileServer) MakeFile(hash, ext string) *File {
 }
 
 func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
+
 	if hash == "" || len(bytes) == 0 {
 		return nil, fmt.Errorf("hash or bytes can't be empty")
 	}
 
-	f := fs.MakeFile(hash, ext)
+	f := fs.makeFile(hash, ext)
 	if f == nil {
 		return nil, fmt.Errorf("error while creating file object")
 	}
@@ -142,12 +147,27 @@ func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
 	}
 
 	if hash != "" {
-		fs.HashToPath[hash] = f
+		fs.hashToPath[hash] = f
 	}
 	return f, nil
 }
 
 func (fs *FileServer) RemoveFile(file *File) error {
-	delete(fs.HashToPath, file.Hash)
-	return os.Remove(file.Path)
+	if err := os.Remove(file.Path); err != nil {
+		return err
+	}
+
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
+
+	delete(fs.hashToPath, file.Hash)
+	return nil
+}
+
+func (fs *FileServer) GetFileByHash(hash string) (file *File, ok bool) {
+	fs.mutex.RLock()
+	defer fs.mutex.RUnlock()
+
+	file, ok = fs.hashToPath[hash]
+	return file, ok
 }

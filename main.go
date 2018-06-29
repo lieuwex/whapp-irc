@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"whapp-irc/database"
+	"whapp-irc/files"
 	"whapp-irc/whapp"
 )
 
@@ -16,7 +17,7 @@ const (
 	defaultLoggingLevel   = "normal"
 )
 
-var fs *FileServer
+var fs *files.FileServer
 var userDb *database.Database
 var loggingLevel whapp.LoggingLevel
 
@@ -69,7 +70,7 @@ func main() {
 		panic(err)
 	}
 
-	fs, err = MakeFileServer(host, fileServerPort, "files")
+	fs, err = files.MakeFileServer(host, fileServerPort, "files")
 	if err != nil {
 		panic(err)
 	}
