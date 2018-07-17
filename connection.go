@@ -499,7 +499,6 @@ func (conn *Connection) getPresenceByUserID(userID string) (presence whapp.Prese
 
 func (conn *Connection) saveDatabaseEntry() error {
 	err := userDb.SaveItem(conn.nickname, database.User{
-		Nickname:             conn.nickname,
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})

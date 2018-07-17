@@ -9,7 +9,6 @@ import (
 )
 
 type User struct {
-	Nickname             string            `json:"nickname"`
 	LocalStorage         map[string]string `json:"localStorage"`
 	LastReceivedReceipts map[string]int64  `json:"lastReceivedReceipts"`
 }
