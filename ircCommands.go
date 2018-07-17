@@ -221,15 +221,19 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		if groups, err := chat.rawChat.Contact.GetCommonGroups(
 			conn.bridge.ctx,
 			conn.bridge.WI,
-		); err == nil {
-			names := make([]string, len(groups))
-			for i, group := range groups {
+		); err == nil && len(groups) > 0 {
+			var names []string
+
+			for _, group := range groups {
+				// TODO: this could be more efficient: currently calling
+				// `convertChat` makes it retrieve all participants in the
+				// group, which is obviously not necessary.
 				chat, err := conn.convertChat(group)
 				if err != nil {
 					continue
 				}
 
-				names[i] = chat.Identifier()
+				names = append(names, chat.Identifier())
 			}
 
 			str := fmt.Sprintf(
