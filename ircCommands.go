@@ -71,8 +71,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			write(":whapp-irc CAP * LIST :" + strings.Join(conn.caps, " "))
 
 		case "REQ":
-			caps := strings.Split(msg.Trailing(), " ")
-			for _, cap := range caps {
+			for _, cap := range strings.Split(msg.Trailing(), " ") {
 				conn.AddCapability(cap)
 			}
 			write(":whapp-irc CAP * ACK :" + strings.Join(conn.caps, " "))
@@ -118,8 +117,8 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			if chat == nil {
 				return status("chat not found: " + msg.Params[0])
 			}
-			err := conn.joinChat(chat)
-			if err != nil {
+
+			if err := conn.joinChat(chat); err != nil {
 				return status("error while joining: " + err.Error())
 			}
 		}
@@ -232,7 +231,14 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 				names[i] = chat.Identifier()
 			}
-			write(fmt.Sprintf(":whapp-irc 319 %s %s :%s", conn.nickname, identifier, strings.Join(names, " ")))
+
+			str := fmt.Sprintf(
+				":whapp-irc 319 %s %s :%s",
+				conn.nickname,
+				identifier,
+				strings.Join(names, " "),
+			)
+			write(str)
 		}
 
 		write(fmt.Sprintf(":whapp-irc 318 %s %s :End of /WHOIS list.", conn.nickname, identifier))

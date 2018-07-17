@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -21,15 +22,15 @@ var fs *files.FileServer
 var userDb *database.Database
 var loggingLevel whapp.LoggingLevel
 
-func handleSocket(socket *net.TCPConn) {
+func handleSocket(socket *net.TCPConn) error {
 	conn, err := MakeConnection()
 	if err != nil {
-		log.Printf("error while making connection: %s", err)
+		return fmt.Errorf("error while making connection: %s", err)
 	}
-	go conn.BindSocket(socket)
+	return conn.BindSocket(socket)
 }
 
-func parseEnvVars() (host, fileServerPort, ircPort, logLevel string) {
+func readEnvVars() (host, fileServerPort, ircPort, logLevel string) {
 	host = os.Getenv("HOST")
 	if host == "" {
 		host = defaultHost
@@ -54,7 +55,7 @@ func parseEnvVars() (host, fileServerPort, ircPort, logLevel string) {
 }
 
 func main() {
-	host, fileServerPort, ircPort, levelRaw := parseEnvVars()
+	host, fileServerPort, ircPort, levelRaw := readEnvVars()
 
 	switch strings.ToLower(levelRaw) {
 	case "verbose":
@@ -94,6 +95,10 @@ func main() {
 			continue
 		}
 
-		go handleSocket(socket)
+		go func() {
+			if err := handleSocket(socket); err != nil {
+				log.Println(err)
+			}
+		}()
 	}
 }

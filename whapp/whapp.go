@@ -93,8 +93,10 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 // This method expects you to already have Whatsapp Web open.
 func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, error) {
 	var str string
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("JSON.stringify(localStorage)", &str))
-	if err != nil {
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("JSON.stringify(localStorage)", &str),
+	); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +104,8 @@ func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, err
 	if err := json.Unmarshal([]byte(str), &res); err != nil {
 		return nil, err
 	}
-	return res, err
+
+	return res, nil
 }
 
 // SetLocalStorage adds all keys given by `localStorage` to the localStorage of
@@ -532,8 +535,10 @@ func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 		return res, err
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getNewMessages()", &res))
-	if err != nil {
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("whappGo.getNewMessages()", &res),
+	); err != nil {
 		return res, err
 	}
 
@@ -541,7 +546,7 @@ func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 		return res[i].Timestamp < res[j].Timestamp
 	})
 
-	return res, err
+	return res, nil
 }
 
 // ListenForMessages listens for new messages by polling every `interval`.
@@ -599,8 +604,10 @@ func (wi *Instance) GetAllChats(ctx context.Context) ([]Chat, error) {
 		return res, err
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getAllChats()", &res))
-	if err != nil {
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("whappGo.getAllChats()", &res),
+	); err != nil {
 		return res, err
 	}
 
@@ -619,8 +626,10 @@ func (wi *Instance) GetPhoneActive(ctx context.Context) (bool, error) {
 		return res, err
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("whappGo.getPhoneActive()", &res))
-	if err != nil {
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("whappGo.getPhoneActive()", &res),
+	); err != nil {
 		return res, err
 	}
 
