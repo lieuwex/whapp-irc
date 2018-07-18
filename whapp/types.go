@@ -241,7 +241,13 @@ func (msg Message) FormatBody(participants []Participant, ownName string) string
 	if !msg.Chat.IsGroupChat {
 		return msg.Body
 	}
-	return resolveMentionsInString(msg.Body, msg.MentionedIDs, participants, ownName)
+
+	return resolveMentionsInString(
+		msg.Body,
+		msg.MentionedIDs,
+		participants,
+		ownName,
+	)
 }
 
 // FormatCaption returns the body of the current message, with mentions
@@ -250,7 +256,13 @@ func (msg Message) FormatCaption(participants []Participant, ownName string) str
 	if !msg.Chat.IsGroupChat {
 		return msg.Caption
 	}
-	return resolveMentionsInString(msg.Caption, msg.MentionedIDs, participants, ownName)
+
+	return resolveMentionsInString(
+		msg.Caption,
+		msg.MentionedIDs,
+		participants,
+		ownName,
+	)
 }
 
 // Content returns the body of the current message, with mentions correctly
@@ -403,24 +415,43 @@ func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmi
 		fun = "demoteParticipant"
 	}
 
-	str := fmt.Sprintf("Store.Wap.%s(%s, %s)", fun, strconv.Quote(c.ID), strconv.Quote(userID))
+	str := fmt.Sprintf(
+		"Store.Wap.%s(%s, %s)",
+		fun,
+		strconv.Quote(c.ID),
+		strconv.Quote(userID),
+	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
 // AddParticipant adds the user with the given userID to the current chat.
 func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID string) error {
-	str := fmt.Sprintf("Store.Wap.addParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
+	str := fmt.Sprintf(
+		"Store.Wap.addParticipant(%s, %s)",
+		strconv.Quote(c.ID),
+		strconv.Quote(userID),
+	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
 // RemoveParticipant removes the user with the given userID from the current
 // chat.
 func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID string) error {
-	str := fmt.Sprintf("Store.Wap.removeParticipant(%s, %s)", strconv.Quote(c.ID), strconv.Quote(userID))
+	str := fmt.Sprintf(
+		"Store.Wap.removeParticipant(%s, %s)",
+		strconv.Quote(c.ID),
+		strconv.Quote(userID),
+	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
-func (c Chat) GetMessagesFromChatTillDate(ctx context.Context, wi *Instance, timestamp int64) ([]Message, error) {
+// GetMessagesFromChatTillDate returns messages in the current chat with a
+// timestamp equal to or greater than `timestamp`.
+func (c Chat) GetMessagesFromChatTillDate(
+	ctx context.Context,
+	wi *Instance,
+	timestamp int64,
+) ([]Message, error) {
 	var res []Message
 
 	if wi.LoginState != Loggedin {
@@ -431,10 +462,15 @@ func (c Chat) GetMessagesFromChatTillDate(ctx context.Context, wi *Instance, tim
 		return res, err
 	}
 
-	str := fmt.Sprintf("whappGo.getMessagesFromChatTillDate(%s, %d)", strconv.Quote(c.ID), timestamp)
-
-	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
-	if err != nil {
+	str := fmt.Sprintf(
+		"whappGo.getMessagesFromChatTillDate(%s, %d)",
+		strconv.Quote(c.ID),
+		timestamp,
+	)
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate(str, &res, awaitPromise),
+	); err != nil {
 		return res, err
 	}
 
