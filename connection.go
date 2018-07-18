@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"whapp-irc/capabilities"
 	"whapp-irc/database"
 	"whapp-irc/whapp"
 
@@ -33,10 +34,7 @@ type Connection struct {
 	nickname string
 	me       whapp.Me
 
-	startedNegotiation         bool
-	negotiationFinished        bool
-	negotiationFinishedChannel chan bool
-	caps                       []string
+	caps *capabilities.CapabilitiesMap
 
 	bridge *Bridge
 	socket *net.TCPConn
@@ -53,9 +51,9 @@ func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
 
-		welcomeCh:                  make(chan bool),
-		negotiationFinishedChannel: make(chan bool),
+		welcomeCh: make(chan bool),
 
+		caps:         capabilities.MakeCapabilitiesMap(),
 		timestampMap: MakeTimestampMap(),
 	}, nil
 }
@@ -163,15 +161,13 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}()
 
 	<-conn.welcomeCh
-	if conn.startedNegotiation {
-		<-conn.negotiationFinishedChannel
-	}
+	conn.caps.WaitNegotiation()
 
 	empty := conn.timestampMap.Length() == 0
 	for _, c := range conn.Chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
-		if empty || !conn.HasCapability("whapp-irc/replay") {
+		if empty || !conn.caps.HasCapability("whapp-irc/replay") {
 			conn.timestampMap.Set(c.ID, c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue

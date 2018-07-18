@@ -11,7 +11,7 @@ import (
 )
 
 func (conn *Connection) writeIRC(time time.Time, msg string) error {
-	if conn.HasCapability("server-time") {
+	if conn.caps.HasCapability("server-time") {
 		timeFormat := time.UTC().Format("2006-01-02T15:04:05.000Z")
 		msg = fmt.Sprintf("@time=%s %s", timeFormat, msg)
 	}
@@ -42,45 +42,30 @@ func formatPrivateMessage(from, to, line string) string {
 	return fmt.Sprintf(":%s PRIVMSG %s :%s", from, to, line)
 }
 
-func (conn *Connection) AddCapability(cap string) {
-	cap = strings.TrimSpace(cap)
-	conn.caps = append(conn.caps, cap)
-}
-func (conn *Connection) HasCapability(cap string) bool {
-	cap = strings.ToUpper(cap)
-	for _, x := range conn.caps {
-		if strings.ToUpper(x) == cap {
-			return true
-		}
-	}
-	return false
-}
-
 func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 	write := conn.writeIRCNow
 	status := conn.status
 
 	switch msg.Command {
 	case "CAP":
-		conn.startedNegotiation = true
+		conn.caps.StartNegotiation()
 		switch msg.Params[0] {
 		case "LS":
 			write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
 
 		case "LIST":
-			write(":whapp-irc CAP * LIST :" + strings.Join(conn.caps, " "))
+			caps := conn.caps.Caps()
+			write(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
 
 		case "REQ":
 			for _, cap := range strings.Split(msg.Trailing(), " ") {
-				conn.AddCapability(cap)
+				conn.caps.AddCapability(cap)
 			}
-			write(":whapp-irc CAP * ACK :" + strings.Join(conn.caps, " "))
+			caps := conn.caps.Caps()
+			write(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
 
 		case "END":
-			if !conn.negotiationFinished {
-				conn.negotiationFinished = true
-				close(conn.negotiationFinishedChannel)
-			}
+			conn.caps.FinishNegotiation()
 		}
 
 	case "PRIVMSG":
