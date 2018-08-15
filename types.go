@@ -5,7 +5,7 @@ import (
 	"whapp-irc/whapp"
 )
 
-const MessageIDListSize = 750
+const messageIDListSize = 750
 
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 var nonNumberRegex = regexp.MustCompile(`[^\d]`)
@@ -57,7 +57,7 @@ func (c *Chat) Identifier() string {
 }
 
 func (c *Chat) AddMessageID(id string) {
-	if len(c.MessageIDs) >= MessageIDListSize {
+	if len(c.MessageIDs) >= messageIDListSize {
 		c.MessageIDs = c.MessageIDs[1:]
 	}
 	c.MessageIDs = append(c.MessageIDs, id)

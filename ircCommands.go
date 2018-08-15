@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	irc "gopkg.in/sorcix/irc.v2"
+	"gopkg.in/sorcix/irc.v2"
 	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
@@ -92,7 +92,9 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			chat.ID,
 			body,
 		); err != nil {
-			log.Printf("err while sending %s\n", err.Error())
+			str := fmt.Sprintf("err while sending: %s", err.Error())
+			log.Println(str)
+			return status(str)
 		}
 
 	case "JOIN":
@@ -132,7 +134,16 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		chat := conn.GetChatByIdentifier(ident)
 		if chat == nil {
 			return status("chat not found")
-		} else if mode != "+o" {
+		}
+
+		var op bool
+		switch mode {
+		case "+o":
+			op = true
+		case "-o":
+			op = false
+
+		default:
 			return nil
 		}
 
@@ -141,8 +152,12 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				continue
 			}
 
-			err := chat.rawChat.SetAdmin(conn.bridge.ctx, conn.bridge.WI, p.ID, true)
-			if err != nil {
+			if err := chat.rawChat.SetAdmin(
+				conn.bridge.ctx,
+				conn.bridge.WI,
+				p.ID,
+				op,
+			); err != nil {
 				str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
 				log.Println(str)
 				return status(str)
@@ -159,7 +174,14 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				nParticipants = 2
 			}
 
-			write(fmt.Sprintf(":whapp-irc 322 %s %s %d :%s", conn.nickname, c.Identifier(), nParticipants, c.Name))
+			str := fmt.Sprintf(
+				":whapp-irc 322 %s %s %d :%s",
+				conn.nickname,
+				c.Identifier(),
+				nParticipants,
+				c.Name,
+			)
+			write(str)
 		}
 		write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.nickname))
 
@@ -201,7 +223,14 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		}
 		identifier := chat.Identifier()
 
-		write(fmt.Sprintf(":whapp-irc 311 %s %s ~%s whapp-irc * :%s", conn.nickname, identifier, identifier, chat.Name))
+		str := fmt.Sprintf(
+			":whapp-irc 311 %s %s ~%s whapp-irc * :%s",
+			conn.nickname,
+			identifier,
+			identifier,
+			chat.Name,
+		)
+		write(str)
 
 		if groups, err := chat.rawChat.Contact.GetCommonGroups(
 			conn.bridge.ctx,
@@ -238,7 +267,12 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 		chat := conn.GetChatByIdentifier(chatIdentifier)
 		if chat == nil || !chat.IsGroupChat {
-			return write(fmt.Sprintf(":whapp-irc 403 %s %s :No such channel", conn.nickname, chatIdentifier))
+			str := fmt.Sprintf(
+				":whapp-irc 403 %s %s :No such channel",
+				conn.nickname,
+				chatIdentifier,
+			)
+			return write(str)
 		}
 
 		for _, p := range chat.Participants {
@@ -246,8 +280,11 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				continue
 			}
 
-			err := chat.rawChat.RemoveParticipant(conn.bridge.ctx, conn.bridge.WI, p.ID)
-			if err != nil {
+			if err := chat.rawChat.RemoveParticipant(
+				conn.bridge.ctx,
+				conn.bridge.WI,
+				p.ID,
+			); err != nil {
 				str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
 				log.Println(str)
 				return status(str)
@@ -262,15 +299,28 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 		chat := conn.GetChatByIdentifier(chatIdentifier)
 		if chat == nil || !chat.IsGroupChat {
-			return write(fmt.Sprintf(":whapp-irc 442 %s %s :You're not on that channel", conn.nickname, chatIdentifier))
+			str := fmt.Sprintf(
+				":whapp-irc 442 %s %s :You're not on that channel",
+				conn.nickname,
+				chatIdentifier,
+			)
+			return write(str)
 		}
 		personChat := conn.GetChatByIdentifier(nick)
 		if personChat == nil || personChat.IsGroupChat {
-			return write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, nick))
+			str := fmt.Sprintf(
+				":whapp-irc 401 %s %s :No such nick/channel",
+				conn.nickname,
+				nick,
+			)
+			return write(str)
 		}
 
-		err := chat.rawChat.AddParticipant(conn.bridge.ctx, conn.bridge.WI, personChat.ID)
-		if err != nil {
+		if err := chat.rawChat.AddParticipant(
+			conn.bridge.ctx,
+			conn.bridge.WI,
+			personChat.ID,
+		); err != nil {
 			str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
 			log.Println(str)
 			return status(str)
