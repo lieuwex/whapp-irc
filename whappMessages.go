@@ -5,6 +5,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"whapp-irc/maps"
 	"whapp-irc/whapp"
 )
 
@@ -23,8 +24,8 @@ func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) 
 	}
 
 	if msg.Location != nil {
-		return fmt.Sprintf(
-			"https://maps.google.com/?q=%f,%f",
+		return maps.ByProvider(
+			mapProvider,
 			msg.Location.Latitude,
 			msg.Location.Longitude,
 		)

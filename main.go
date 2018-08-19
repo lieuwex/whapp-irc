@@ -8,6 +8,7 @@ import (
 	"strings"
 	"whapp-irc/database"
 	"whapp-irc/files"
+	"whapp-irc/maps"
 	"whapp-irc/whapp"
 )
 
@@ -16,11 +17,13 @@ const (
 	defaultFileServerPort = "3000"
 	defaultIRCPort        = "6060"
 	defaultLoggingLevel   = "normal"
+	defaultMapProvider    = "google-maps"
 )
 
 var fs *files.FileServer
 var userDb *database.Database
 var loggingLevel whapp.LoggingLevel
+var mapProvider maps.Provider
 
 func handleSocket(socket *net.TCPConn) error {
 	conn, err := MakeConnection()
@@ -30,7 +33,7 @@ func handleSocket(socket *net.TCPConn) error {
 	return conn.BindSocket(socket)
 }
 
-func readEnvVars() (host, fileServerPort, ircPort, logLevel string) {
+func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider string) {
 	host = os.Getenv("HOST")
 	if host == "" {
 		host = defaultHost
@@ -51,17 +54,33 @@ func readEnvVars() (host, fileServerPort, ircPort, logLevel string) {
 		logLevel = defaultLoggingLevel
 	}
 
+	mapProvider = os.Getenv("MAP_PROVIDER")
+	if mapProvider == "" {
+		mapProvider = defaultMapProvider
+	}
+
 	return
 }
 
 func main() {
-	host, fileServerPort, ircPort, levelRaw := readEnvVars()
+	host, fileServerPort, ircPort, levelRaw, mapProviderRaw := readEnvVars()
 
 	switch strings.ToLower(levelRaw) {
 	case "verbose":
 		loggingLevel = whapp.LogLevelVerbose
 	default:
 		loggingLevel = whapp.LogLevelNormal
+	}
+
+	switch strings.ToLower(mapProviderRaw) {
+	case "openstreetmap", "open-street-map":
+		mapProvider = maps.OpenStreetMap
+	case "googlemaps", "google-maps":
+		mapProvider = maps.GoogleMaps
+
+	default:
+		str := fmt.Sprintf("no map provider %s found", mapProviderRaw)
+		panic(str)
 	}
 
 	var err error
