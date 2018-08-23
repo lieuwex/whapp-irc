@@ -119,12 +119,12 @@ func (fs *FileServer) makeFile(hash, ext string) *File {
 		url = fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, fname)
 	}
 
-	file := fmt.Sprintf("./%s/%s", fs.Directory, fname)
+	path := fmt.Sprintf("./%s/%s", fs.Directory, fname)
 
 	return &File{
 		Hash: hash,
 		URL:  url,
-		Path: file,
+		Path: path,
 	}
 }
 
@@ -146,19 +146,17 @@ func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
 		return nil, err
 	}
 
-	if hash != "" {
-		fs.hashToPath[hash] = f
-	}
+	fs.hashToPath[hash] = f
 	return f, nil
 }
 
 func (fs *FileServer) RemoveFile(file *File) error {
+	fs.mutex.Lock()
+	defer fs.mutex.Unlock()
+
 	if err := os.Remove(file.Path); err != nil {
 		return err
 	}
-
-	fs.mutex.Lock()
-	defer fs.mutex.Unlock()
 
 	delete(fs.hashToPath, file.Hash)
 	return nil
