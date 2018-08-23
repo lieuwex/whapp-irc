@@ -47,16 +47,16 @@ func MakeFileServer(host, port, dir string) (*FileServer, error) {
 		}
 
 		for _, f := range files {
-			if f.IsDir() {
+			fname := f.Name()
+			dotIndex := strings.LastIndexByte(fname, '.')
+
+			if f.IsDir() || fname[0] == '.' {
 				continue
 			}
 
 			var b64url string
 			var ext string
-
-			fname := f.Name()
-			dotIndex := strings.LastIndexByte(fname, '.')
-			if dotIndex == -1 {
+			if dotIndex == -1 { // no extension
 				b64url = fname
 				ext = ""
 			} else {
