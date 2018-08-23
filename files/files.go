@@ -164,10 +164,10 @@ func (fs *FileServer) RemoveFile(file *File) error {
 	return nil
 }
 
-func (fs *FileServer) GetFileByHash(hash string) (file *File, ok bool) {
+func (fs *FileServer) GetFileByHash(hash string) (file *File, has bool) {
 	fs.mutex.RLock()
 	defer fs.mutex.RUnlock()
 
-	file, ok = fs.hashToPath[hash]
-	return file, ok
+	file, has = fs.hashToPath[hash]
+	return file, has
 }

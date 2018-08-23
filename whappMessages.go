@@ -46,7 +46,7 @@ func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) 
 }
 
 func downloadAndStoreMedia(msg whapp.Message) error {
-	if _, ok := fs.GetFileByHash(msg.MediaFileHash); msg.IsMMS && !ok {
+	if _, has := fs.GetFileByHash(msg.MediaFileHash); msg.IsMMS && !has {
 		bytes, err := msg.DownloadMedia()
 		if err != nil {
 			return err
