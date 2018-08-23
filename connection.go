@@ -201,6 +201,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			}
 		}
 	}
+	conn.status("ready for new messages")
 
 	go func() {
 		defer cancel()
