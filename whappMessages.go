@@ -151,7 +151,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 }
 
 func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) error {
-	if msg.Type != "gp2" {
+	if msg.Type != "gp2" && msg.Type != "call_log" {
 		return fmt.Errorf("no idea what to do with notification type %s", msg.Type)
 	} else if len(msg.RecipientIDs) == 0 {
 		return nil
@@ -215,6 +215,12 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 
 		case "remove":
 			str := fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient)
+			if err := conn.writeIRC(msg.Time(), str); err != nil {
+				return err
+			}
+
+		case "miss":
+			str := formatPrivateMessage(author, chat.Identifier(), "-- missed call --")
 			if err := conn.writeIRC(msg.Time(), str); err != nil {
 				return err
 			}
