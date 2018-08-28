@@ -99,9 +99,9 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	}
 	chat.AddMessageID(msg.ID.Serialized)
 
-	lastTimestamp, found := conn.timestampMap.Get(chat.ID)
+	lastTimestamp, found := conn.timestampMap.Get(chat.ID.String())
 	if !found || msg.Timestamp > lastTimestamp {
-		conn.timestampMap.Set(chat.ID, msg.Timestamp)
+		conn.timestampMap.Set(chat.ID.String(), msg.Timestamp)
 		go conn.saveDatabaseEntry()
 	}
 
@@ -157,7 +157,7 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 		return nil
 	}
 
-	findName := func(id string) string {
+	findName := func(id whapp.ID) string {
 		for _, p := range chat.Participants {
 			if p.ID == id {
 				return p.SafeName()
@@ -168,7 +168,7 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 			return chat.Identifier()
 		}
 
-		return strings.Split(id, "@")[0]
+		return id.User
 	}
 
 	if msg.Sender != nil {

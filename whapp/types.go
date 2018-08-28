@@ -12,13 +12,11 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func resolveMentionsInString(body string, mentionedIDs []string, participants []Participant, ownName string) string {
+func resolveMentionsInString(body string, mentionedIDs []ID, participants []Participant, ownName string) string {
 	for _, id := range mentionedIDs {
 		for _, c := range participants {
 			if c.ID == id {
-				number := id[:strings.IndexByte(id, '@')]
-
-				oldMention := "@" + number
+				oldMention := "@" + id.User
 				newMention := "@" + c.Contact.GetName()
 				if c.Contact.IsMe {
 					newMention = "@" + ownName
@@ -36,6 +34,16 @@ func resolveMentionsInString(body string, mentionedIDs []string, participants []
 
 var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
 
+// ID contains an ID of an user.
+type ID struct {
+	Server string `json:"server"`
+	User   string `json:"user"`
+}
+
+func (id ID) String() string {
+	return id.User + "@" + id.Server
+}
+
 // PhoneInfo contains info about the connected phone.
 type PhoneInfo struct {
 	WhatsAppVersion    string `json:"wa_version"`
@@ -50,7 +58,7 @@ type Me struct {
 	LoginCode         string    `json:"ref"`
 	LoginCodeTTL      int       `json:"refTTL"`
 	Connected         bool      `json:"connected"`
-	SelfID            string    `json:"me"`
+	SelfID            ID        `json:"me"`
 	ProtocolVersion   []int     `json:"protoVersion"`
 	ClientToken       string    `json:"clientToken"`
 	ServerToken       string    `json:"serverToken"`
@@ -66,7 +74,7 @@ type Me struct {
 
 // Contact represents a contact in the users contacts list.
 type Contact struct {
-	ID                string `json:"id"`
+	ID                ID     `json:"id"`
 	Name              string `json:"name"`
 	Type              string `json:"type"`
 	PlaintextDisabled bool   `json:"plaintextDisabled"`
@@ -111,7 +119,7 @@ func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, err
 		return res, err
 	}
 
-	str := fmt.Sprintf("whappGo.getCommonGroups(%s)", strconv.Quote(c.ID))
+	str := fmt.Sprintf("whappGo.getCommonGroups(%s)", strconv.Quote(c.ID.String()))
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	return res, err
@@ -119,7 +127,7 @@ func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, err
 
 // Participant represents a participants in a group chat.
 type Participant struct {
-	ID      string  `json:"id"`
+	ID      ID      `json:"id"`
 	IsAdmin bool    `json:"isAdmin"`
 	Contact Contact `json:"contact"`
 }
@@ -127,7 +135,7 @@ type Participant struct {
 // MessageID contains various IDs for a message.
 type MessageID struct {
 	FromMe     bool   `json:"fromMe"`
-	ChatID     string `json:"remote"`
+	ChatID     ID     `json:"remote"`
 	ID         string `json:"id"`
 	Serialized string `json:"_serialized"`
 }
@@ -177,8 +185,8 @@ type Message struct {
 	Timestamp  int64     `json:"t"`
 	NotifyName string    `json:"notifyName"`
 	Sender     *Contact  `json:"senderObj"`
-	From       string    `json:"from"`
-	To         string    `json:"to"`
+	From       ID        `json:"from"`
+	To         ID        `json:"to"`
 	Body       string    `json:"body"`
 	Self       string    `json:"self"`
 	Ack        int       `json:"ack"`
@@ -188,8 +196,8 @@ type Message struct {
 	Type    string `json:"type"`
 	Subtype string `json:"subtype"`
 
-	RecipientIDs []string `json:"recipients"`
-	MentionedIDs []string `json:"mentionedJidList"`
+	RecipientIDs []ID `json:"recipients"`
+	MentionedIDs []ID `json:"mentionedJidList"`
 
 	IsGIF          bool `json:"isGif"`
 	IsLive         bool `json:"isLive"`
@@ -289,7 +297,7 @@ func (msg Message) Time() time.Time {
 
 // Presence contains information about the presence of a contact of the user.
 type Presence struct {
-	ID        string `json:"id"`
+	ID        ID     `json:"id"`
 	Timestamp int64  `json:"timestamp"`
 	Type      string `json:"type"`
 
@@ -310,7 +318,7 @@ func (p Presence) Time() time.Time {
 type Description struct {
 	ID          string `json:"id"`
 	Description string `json:"desc"`
-	SetBy       string `json:"owner"`
+	SetBy       ID     `json:"owner"`
 	Timestamp   int64  `json:"time"`
 }
 
@@ -322,7 +330,7 @@ func (d Description) Time() time.Time {
 
 // Chat represents a chat in WhatsApp.
 type Chat struct {
-	ID                    string    `json:"id"`
+	ID                    ID        `json:"id"`
 	PendingMsgs           bool      `json:"pendingMsgs"`
 	LastReceivedMessageID MessageID `json:"lastReceivedKey"`
 	Timestamp             int64     `json:"t"`
@@ -371,7 +379,7 @@ func (c Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, er
 		return res, err
 	}
 
-	str := fmt.Sprintf("whappGo.getGroupParticipants(%s)", strconv.Quote(c.ID))
+	str := fmt.Sprintf("whappGo.getGroupParticipants(%s)", strconv.Quote(c.ID.String()))
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
@@ -395,7 +403,7 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 		return res, err
 	}
 
-	str := fmt.Sprintf("whappGo.getPresence(%s)", strconv.Quote(c.ID))
+	str := fmt.Sprintf("whappGo.getPresence(%s)", strconv.Quote(c.ID.String()))
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
@@ -407,40 +415,33 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 
 // SetAdmin sets the admin state of the user with given userID in the current
 // chat.
-func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID string, setAdmin bool) error {
-	var fun string
-	if setAdmin {
-		fun = "promoteParticipant"
-	} else {
-		fun = "demoteParticipant"
-	}
-
+func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID ID, setAdmin bool) error {
 	str := fmt.Sprintf(
-		"Store.Wap.%s(%s, %s)",
-		fun,
-		strconv.Quote(c.ID),
-		strconv.Quote(userID),
+		"whappGo.setAdmin(%s, %s, %d)",
+		strconv.Quote(c.ID.String()),
+		strconv.Quote(userID.String()),
+		setAdmin,
 	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
 // AddParticipant adds the user with the given userID to the current chat.
-func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID string) error {
+func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID ID) error {
 	str := fmt.Sprintf(
-		"Store.Wap.addParticipant(%s, %s)",
-		strconv.Quote(c.ID),
-		strconv.Quote(userID),
+		"whappGo.addParticipant(%s, %s)",
+		strconv.Quote(c.ID.String()),
+		strconv.Quote(userID.String()),
 	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 
 // RemoveParticipant removes the user with the given userID from the current
 // chat.
-func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID string) error {
+func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID ID) error {
 	str := fmt.Sprintf(
-		"Store.Wap.removeParticipant(%s, %s)",
-		strconv.Quote(c.ID),
-		strconv.Quote(userID),
+		"whappGo.removeParticipant(%s, %s)",
+		strconv.Quote(c.ID.String()),
+		strconv.Quote(userID.String()),
 	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
@@ -464,7 +465,7 @@ func (c Chat) GetMessagesFromChatTillDate(
 
 	str := fmt.Sprintf(
 		"whappGo.getMessagesFromChatTillDate(%s, %d)",
-		strconv.Quote(c.ID),
+		strconv.Quote(c.ID.String()),
 		timestamp,
 	)
 	if err := wi.cdp.Run(

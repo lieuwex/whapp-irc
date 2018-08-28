@@ -165,10 +165,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 	empty := conn.timestampMap.Length() == 0
 	for _, c := range conn.Chats {
-		prevTimestamp, found := conn.timestampMap.Get(c.ID)
+		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
 
 		if empty || !conn.caps.HasCapability("whapp-irc/replay") {
-			conn.timestampMap.Set(c.ID, c.rawChat.Timestamp)
+			conn.timestampMap.Set(c.ID.String(), c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
 		} else if c.rawChat.Timestamp <= prevTimestamp {
@@ -324,7 +324,7 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	return nil
 }
 
-func (conn *Connection) GetChatByID(ID string) *Chat {
+func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
 	for _, c := range conn.Chats {
 		if c.ID == ID {
 			return c
@@ -483,7 +483,7 @@ func (conn *Connection) setup() error {
 	return nil
 }
 
-func (conn *Connection) getPresenceByUserID(userID string) (presence whapp.Presence, found bool, err error) {
+func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Presence, found bool, err error) {
 	for _, c := range conn.Chats {
 		if c.ID == userID {
 			presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)

@@ -291,9 +291,13 @@ func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duratio
 
 // SendMessageToChatID sends the given `message` to the chat with the given
 // `chatID`.
-func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID string, message string) error {
+func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID ID, message string) error {
 	// REVIEW: make this safe.
-	str := fmt.Sprintf("whappGo.sendMessage(%s, %s)", strconv.Quote(chatID), strconv.Quote(message))
+	str := fmt.Sprintf(
+		"whappGo.sendMessage(%s, %s)",
+		strconv.Quote(chatID.String()),
+		strconv.Quote(message),
+	)
 	return runLoggedinWithoutRes(ctx, wi, str)
 }
 

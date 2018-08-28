@@ -26,7 +26,7 @@ func (p *Participant) SafeName() string {
 }
 
 type Chat struct {
-	ID   string
+	ID   whapp.ID
 	Name string
 
 	IsGroupChat  bool

@@ -12,6 +12,14 @@ func (wi *Instance) inject(ctx context.Context) error {
 	}
 
 	script := `
+	function ideq (a, b) {
+		return a._serialized === b._serialized;
+	}
+	function idFromString (str) {
+		const [ user, server ] = str.split('@');
+		return { user, server, _serialized: str };
+	}
+
 	var whappGo = {};
 
 	whappGo.setupStore = async function () {
@@ -195,7 +203,9 @@ func (wi *Instance) inject(ctx context.Context) error {
 		};
 		*/
 
-		const chat = Store.Chat.models.find(c => c.id === id);
+		id = idFromString(id);
+
+		const chat = Store.Chat.models.find(c => ideq(c.id, id));
 		if (chat == null) {
 			throw new Error('no chat with id ' + id + ' found.');
 		}
@@ -231,7 +241,8 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getGroupParticipants = async function (id) {
-		const res = Store.GroupMetadata.models.find(md => md.id === id);
+		id = idFromString(id);
+		const res = Store.GroupMetadata.models.find(md => ideq(md.id, id));
 
 		// TODO: user should be able to just get the stale one and call
 		// .Update() in the go code.
@@ -247,7 +258,8 @@ func (wi *Instance) inject(ctx context.Context) error {
 	};
 
 	whappGo.getPresence = async function (chatId) {
-		const res = Store.Presence.models.find(p => p.id === chatId);
+		chatId = idFromString(chatId);
+		const res = Store.Presence.models.find(p => ideq(p.id, chatId));
 		await res.update();
 		return whappGo.presenceToJSON(res);
 	}
@@ -256,8 +268,9 @@ func (wi *Instance) inject(ctx context.Context) error {
 		return Store.Stream.phoneActive;
 	};
 
-	whappGo.getMessagesFromChatTillDate = async function (chatID, timestamp) {
-		const chat = Store.Chat.models.find(c => c.id === chatID);
+	whappGo.getMessagesFromChatTillDate = async function (chatId, timestamp) {
+		chatId = idFromString(chatId);
+		const chat = Store.Chat.models.find(c => ideq(c.id, chatId));
 
 		while (
 			chat.msgs.models[0].t > timestamp &&
@@ -272,8 +285,10 @@ func (wi *Instance) inject(ctx context.Context) error {
 			.map(whappGo.msgToJSON);
 	};
 
-	whappGo.getCommonGroups = async function (contactID) {
-		const contact = Store.Contact.models.find(c => c.id === contactID);
+	whappGo.getCommonGroups = async function (contactId) {
+		contactId = idFromString(contactId);
+
+		const contact = Store.Contact.models.find(c => ideq(c.id, contactId));
 		await contact.findCommonGroups();
 
 		if (contact.commonGroups == null) {
@@ -282,6 +297,26 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 		return contact.commonGroups.models.map(whappGo.chatToJSON);
 	};
+
+	whappGo.setAdmin = function (chatId, userId, admin) {
+		chatId = idFromString(chatId);
+		userId = idFromString(userId);
+
+		const fn = admin ? 'promoteParticipant' : 'demoteParticipant';
+		return Store.Wap[fn](chatId, userId);
+	}
+
+	whappGo.addParticipant = function (chatId, userId) {
+		chatId = idFromString(chatId);
+		userId = idFromString(userId);
+		return Store.Wap.addParticipant(chatId, userId);
+	}
+
+	whappGo.removeParticipant = function (chatId, userId) {
+		chatId = idFromString(chatId);
+		userId = idFromString(userId);
+		return Store.Wap.removeParticipant(chatId, userId);
+	}
 	`
 
 	var idc []byte
