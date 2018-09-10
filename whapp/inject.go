@@ -74,8 +74,11 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 		var res = msg.toJSON();
 
+		if (typeof res.body !== 'string') {
+			res.body = '';
+		}
+
 		res.senderObj = whappGo.contactToJSON(msg.senderObj);
-		res.content = msg.body;
 		res.caption = msg.caption;
 		res.isGroupMsg = msg.isGroupMsg;
 		res.isLink = !!msg.isLink; // REVIEW
