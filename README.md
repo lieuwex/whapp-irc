@@ -34,7 +34,11 @@ Quick and simple.
 - `HOST`: the IP/domain used to generate the URLs to media files;
 - `FILE_SERVER_PORT`: the port used for the file httpserver, if not 80 it will
 	be appended to the URLs;
-- `IRC_SERVER_PORT`: the port to listen on for IRC connections.
+- `IRC_SERVER_PORT`: the port to listen on for IRC connections;
+- `LOG_LEVEL`: `normal` (default) or `verbose`, if verbose it will log all
+	communication between whapp-irc and the chromium instance;
+- `MAP_PROVIDER`: The map provider to use for location messages: can be one of
+	`googlemaps` (default) or `openstreetmap`.
 
 ## docker
 It's recommend to use the docker image.
