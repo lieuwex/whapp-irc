@@ -1,6 +1,6 @@
 FROM golang:1.10.1-alpine3.7 AS builder
 
-RUN apk update; apk add git
+RUN apk update && apk add git
 RUN go get -u github.com/golang/dep/cmd/dep
 
 RUN mkdir -p /go/src/whapp-irc
@@ -15,10 +15,7 @@ RUN GOOS=linux go build -o whapp-irc
 FROM alpine:latest AS runner
 
 # Update apk repositories
-RUN echo "http://dl-2.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories && \
-	echo "http://dl-2.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-	echo "http://dl-2.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
-	apk update
+RUN apk update
 
 # Install chromium
 RUN apk --no-cache --allow-untrusted add \
