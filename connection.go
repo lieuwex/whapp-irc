@@ -197,7 +197,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 			if err := conn.handleWhappMessage(msg); err != nil {
 				log.Printf("error handling older whapp message: %s\n", err.Error())
-				return err
+				continue
 			}
 		}
 	}
