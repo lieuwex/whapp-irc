@@ -49,7 +49,7 @@ func (c *Chat) Identifier() string {
 	}
 
 	name := c.SafeName()
-	if !c.IsGroupChat && name[0] == '+' {
+	if !c.IsGroupChat && len(name) > 0 && name[0] == '+' {
 		name = name[1:]
 	}
 

@@ -277,6 +277,9 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	}
 
 	identifier := chat.Identifier()
+	if identifier == "" || identifier == "#" {
+		return fmt.Errorf("chat.Identifier() is empty, chat.Name is %s", chat.Name)
+	}
 
 	str := fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier)
 	if err := conn.writeIRCNow(str); err != nil {
