@@ -422,7 +422,7 @@ func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID ID, setAdmin bo
 		strconv.Quote(userID.String()),
 		setAdmin,
 	)
-	return runLoggedinWithoutRes(ctx, wi, str)
+	return runLoggedinWithoutRes(ctx, wi, str, false) // TODO: true?
 }
 
 // AddParticipant adds the user with the given userID to the current chat.
@@ -432,7 +432,7 @@ func (c Chat) AddParticipant(ctx context.Context, wi *Instance, userID ID) error
 		strconv.Quote(c.ID.String()),
 		strconv.Quote(userID.String()),
 	)
-	return runLoggedinWithoutRes(ctx, wi, str)
+	return runLoggedinWithoutRes(ctx, wi, str, false) // TODO: true?
 }
 
 // RemoveParticipant removes the user with the given userID from the current
@@ -443,7 +443,7 @@ func (c Chat) RemoveParticipant(ctx context.Context, wi *Instance, userID ID) er
 		strconv.Quote(c.ID.String()),
 		strconv.Quote(userID.String()),
 	)
-	return runLoggedinWithoutRes(ctx, wi, str)
+	return runLoggedinWithoutRes(ctx, wi, str, false) // TODO: true?
 }
 
 // GetMessagesFromChatTillDate returns messages in the current chat with a

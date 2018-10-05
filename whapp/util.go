@@ -23,7 +23,7 @@ func downloadFile(url string) ([]byte, error) {
 	return ioutil.ReadAll(res.Body)
 }
 
-func runLoggedinWithoutRes(ctx context.Context, wi *Instance, code string) error {
+func runLoggedinWithoutRes(ctx context.Context, wi *Instance, code string, await bool) error {
 	// REVIEW: find some better way than 'idc'
 
 	if wi.LoginState != Loggedin {
@@ -35,5 +35,8 @@ func runLoggedinWithoutRes(ctx context.Context, wi *Instance, code string) error
 	}
 
 	var idc []byte
-	return wi.cdp.Run(ctx, chromedp.Evaluate(code, &idc, awaitPromise))
+	if await {
+		return wi.cdp.Run(ctx, chromedp.Evaluate(code, &idc, awaitPromise))
+	}
+	return wi.cdp.Run(ctx, chromedp.Evaluate(code, &idc))
 }

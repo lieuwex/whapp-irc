@@ -297,7 +297,7 @@ func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID ID, message 
 		strconv.Quote(chatID.String()),
 		strconv.Quote(message),
 	)
-	return runLoggedinWithoutRes(ctx, wi, str)
+	return runLoggedinWithoutRes(ctx, wi, str, false)
 }
 
 // GetAllChats returns a slice containing all the chats the user has
