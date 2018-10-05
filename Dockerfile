@@ -12,7 +12,7 @@ RUN GOOS=linux go build -o whapp-irc
 
 #####
 
-FROM alpine:latest AS runner
+FROM alpine:3.7 AS runner
 
 # Update apk repositories
 RUN apk update
