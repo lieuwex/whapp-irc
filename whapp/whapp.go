@@ -30,7 +30,6 @@ func MakeInstance(
 ) (*Instance, error) {
 	options := chromedp.WithRunnerOptions(
 		runner.Path(chromePath),
-		runner.Port(9222),
 
 		runner.KillProcessGroup,
 		runner.ForceKill,

@@ -2,13 +2,16 @@
 
 
 [[projects]]
+  digest = "1:b28b250b648609be14e0fa4a220b9b991ccaf7b1226781fd9d6e4dd6f4e086fd"
   name = "github.com/avast/retry-go"
   packages = ["."]
+  pruneopts = "UT"
   revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
   version = "1.0.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:997e2595f46a7c91127bc7ffe5c804a85f876014f3c84edcba79979e85aee43f"
   name = "github.com/chromedp/cdproto"
   packages = [
     ".",
@@ -48,126 +51,168 @@
     "storage",
     "systeminfo",
     "target",
+    "testing",
     "tethering",
-    "tracing"
+    "tracing",
   ]
-  revision = "55db67b53f25ccea966f55081b17c1a801a1c109"
+  pruneopts = "UT"
+  revision = "94e0acc3a5bf6bbec1d9a996a5443f37abfdd325"
 
 [[projects]]
-  branch = "master"
+  digest = "1:13e2ffaa15cf117544a44b046c0438063047ee1b963ef9312ce7758c27cdaebc"
   name = "github.com/chromedp/chromedp"
   packages = [
     ".",
     "client",
     "kb",
-    "runner"
+    "runner",
   ]
-  revision = "68c34da207ddddcc114a607e0a1555dbcf337a01"
+  pruneopts = "UT"
+  revision = "34591780d9d429c470ccf81a2760c40245fc823a"
+  version = "v0.1.2"
 
 [[projects]]
+  digest = "1:2694597a20d303502ad1b7f1cc688977c7dc34da732ccf4d27e98b552cceed5b"
   name = "github.com/disintegration/imaging"
   packages = ["."]
-  revision = "bbcee2f5c9d5e94ca42c8b50ec847fec64a6c134"
-  version = "v1.4.2"
+  pruneopts = "UT"
+  revision = "0bd5694c78c9c3d9a3cd06a706a8f3c59296a9ac"
+  version = "v1.5.0"
 
 [[projects]]
+  digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
   name = "github.com/gorilla/websocket"
   packages = ["."]
-  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
-  version = "v1.2.0"
+  pruneopts = "UT"
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
 
 [[projects]]
+  digest = "1:1dafdfd6b2d1103e1ef5c1c1255f395f3ceaceca327d3640d0f06039448bf85c"
   name = "github.com/h2non/filetype"
   packages = ["."]
+  pruneopts = "UT"
   revision = "cc14fdc9ca0e4c2bafad7458f6ff79fd3947cfbb"
   version = "v1.0.5"
 
 [[projects]]
   branch = "master"
+  digest = "1:901625a0300fa83074dcf2510424c26a19dc3edadf67b34ca45a78f879ac4b0c"
   name = "github.com/knq/snaker"
   packages = ["."]
+  pruneopts = "UT"
   revision = "d9ad1e7f342a5b58202aa92c5f1106d7bb8b9c73"
 
 [[projects]]
   branch = "master"
+  digest = "1:4bc4b80749499a818176b07698dc72025610f5570168a47a94ffd38709e4a5f0"
   name = "github.com/knq/sysutil"
   packages = ["."]
+  pruneopts = "UT"
   revision = "0218e141a794643e8c0fa283b9cd076fc0df662d"
 
 [[projects]]
   branch = "master"
+  digest = "1:aa3d8d42865c42626b5c1add193692d045b3188b1479f0a0a88690d21fe20083"
   name = "github.com/mailru/easyjson"
   packages = [
     ".",
     "buffer",
     "jlexer",
-    "jwriter"
+    "jwriter",
   ]
-  revision = "9825584555aa620c53c265d4a09ace0df1346fd9"
+  pruneopts = "UT"
+  revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
 
 [[projects]]
-  branch = "master"
+  digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "bb74f1db0675b241733089d5a1faa5dd8b0ef57b"
+  pruneopts = "UT"
+  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
+  version = "v1.1.2"
 
 [[projects]]
+  digest = "1:be88a46cd36136d9a0fbe8f42dffc269a62544e3a12ff3b047b4704f9b349b42"
   name = "github.com/mozillazg/go-unidecode"
   packages = [
     ".",
-    "table"
+    "table",
   ]
+  pruneopts = "UT"
   revision = "7ab3c72180eeb79ccb8746137e14d6b0a60dd685"
   version = "v0.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:bf1cb2d456a753d515d90e43c4b05afa4837e75d7808d1752607b91007ce25bb"
   name = "github.com/skip2/go-qrcode"
   packages = [
     ".",
     "bitset",
-    "reedsolomon"
+    "reedsolomon",
   ]
+  pruneopts = "UT"
   revision = "cf5f9fa2f0d847edb8e038db7ed975e239095e1a"
 
 [[projects]]
   branch = "master"
+  digest = "1:86f286e7afe01694ffd50bf9226ce2158a75ad099c03071be32b592d68115325"
   name = "golang.org/x/crypto"
   packages = ["hkdf"]
-  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
+  pruneopts = "UT"
+  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
 
 [[projects]]
   branch = "master"
+  digest = "1:d3d337e91c35f337d548873978c858ecb723168a6303a41a3ba625c79094f899"
   name = "golang.org/x/image"
   packages = [
     "bmp",
     "tiff",
-    "tiff/lzw"
+    "tiff/lzw",
   ]
-  revision = "af66defab954cb421ca110193eed9477c8541e2a"
+  pruneopts = "UT"
+  revision = "991ec62608f3c0da01d400756917825d1e2fd528"
 
 [[projects]]
+  digest = "1:1b9d6106326573c0212b29c1796f128271278474ed629055645ace928faaea67"
   name = "gopkg.in/h2non/filetype.v1"
   packages = [
     "matchers",
-    "types"
+    "types",
   ]
+  pruneopts = "UT"
   revision = "cc14fdc9ca0e4c2bafad7458f6ff79fd3947cfbb"
   version = "v1.0.5"
 
 [[projects]]
   branch = "v2"
+  digest = "1:32f46a08154545fdce0a2244c9bbe1b817ec2ce4a900a61ca1c21e90edb55875"
   name = "gopkg.in/sorcix/irc.v2"
   packages = [
     ".",
     "ctcp",
-    "internal"
+    "internal",
   ]
-  revision = "1b25be7f891d1bd0190ac0ef159da153c9ffa22a"
+  pruneopts = "UT"
+  revision = "63eed78b082d43eae927969351464e98b6dc7eb9"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "01ee7a093bcd93bb7f31767eb05d27f1446b6a5d535fac2b2df11997a0c4f3e7"
+  input-imports = [
+    "github.com/avast/retry-go",
+    "github.com/chromedp/cdproto/runtime",
+    "github.com/chromedp/chromedp",
+    "github.com/chromedp/chromedp/runner",
+    "github.com/h2non/filetype",
+    "github.com/mitchellh/mapstructure",
+    "github.com/mozillazg/go-unidecode",
+    "github.com/skip2/go-qrcode",
+    "golang.org/x/crypto/hkdf",
+    "gopkg.in/sorcix/irc.v2",
+    "gopkg.in/sorcix/irc.v2/ctcp",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
