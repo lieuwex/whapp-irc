@@ -94,17 +94,28 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
+	writeListNow := func(messages []string) error {
+		for _, msg := range messages {
+			if err := conn.writeIRCNow(msg); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	welcome := func() (setup bool, err error) {
 		if conn.welcomed || conn.nickname == "" {
 			return false, nil
 		}
 
-		str := fmt.Sprintf(":whapp-irc 001 %s Welcome to whapp-irc, %s.", conn.nickname, conn.nickname)
-		if err := conn.writeIRCNow(str); err != nil {
-			return false, err
-		}
-		str = fmt.Sprintf(":whapp-irc 002 %s Enjoy the ride.", conn.nickname)
-		if err := conn.writeIRCNow(str); err != nil {
+		if err := writeListNow([]string{
+			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.nickname, conn.nickname),
+			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.nickname),
+			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.nickname, startTime),
+			fmt.Sprintf(":whapp-irc 004 %s :", conn.nickname),
+			fmt.Sprintf(":whapp-irc 375 %s :Enjoy the ride.", conn.nickname),
+			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.nickname),
+		}); err != nil {
 			return false, err
 		}
 

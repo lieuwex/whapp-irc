@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 	"whapp-irc/database"
 	"whapp-irc/files"
 	"whapp-irc/maps"
@@ -24,6 +25,7 @@ var fs *files.FileServer
 var userDb *database.Database
 var loggingLevel whapp.LoggingLevel
 var mapProvider maps.Provider
+var startTime = time.Now()
 
 func handleSocket(socket *net.TCPConn) error {
 	conn, err := MakeConnection()
