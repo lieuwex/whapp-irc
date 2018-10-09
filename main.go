@@ -19,6 +19,7 @@ const (
 	defaultIRCPort        = "6060"
 	defaultLoggingLevel   = "normal"
 	defaultMapProvider    = "google-maps"
+	defaultReplayMode     = "normal"
 )
 
 var fs *files.FileServer
@@ -26,6 +27,7 @@ var userDb *database.Database
 var loggingLevel whapp.LoggingLevel
 var mapProvider maps.Provider
 var startTime = time.Now()
+var alternativeReplay = false
 
 func handleSocket(socket *net.TCPConn) error {
 	conn, err := MakeConnection()
@@ -35,7 +37,7 @@ func handleSocket(socket *net.TCPConn) error {
 	return conn.BindSocket(socket)
 }
 
-func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider string) {
+func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider, replayMode string) {
 	host = os.Getenv("HOST")
 	if host == "" {
 		host = defaultHost
@@ -61,11 +63,16 @@ func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider string)
 		mapProvider = defaultMapProvider
 	}
 
+	replayMode = os.Getenv("REPLAY_MODE")
+	if replayMode == "" {
+		replayMode = defaultReplayMode
+	}
+
 	return
 }
 
 func main() {
-	host, fileServerPort, ircPort, levelRaw, mapProviderRaw := readEnvVars()
+	host, fileServerPort, ircPort, levelRaw, mapProviderRaw, replayMode := readEnvVars()
 
 	switch strings.ToLower(levelRaw) {
 	case "verbose":
@@ -83,6 +90,10 @@ func main() {
 	default:
 		str := fmt.Sprintf("no map provider %s found", mapProviderRaw)
 		panic(str)
+	}
+
+	if replayMode == "alternative" {
+		alternativeReplay = true
 	}
 
 	var err error

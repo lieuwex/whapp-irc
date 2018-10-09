@@ -72,6 +72,14 @@ func downloadAndStoreMedia(msg whapp.Message) error {
 	return nil
 }
 
+func (conn *Connection) handleWhappMessageReplay(msg whapp.Message) error {
+	if !alternativeReplay {
+		return conn.handleWhappMessage(msg)
+	}
+
+	return conn.alternativeReplayWhappMessageHandle(msg)
+}
+
 func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	// HACK
 	if msg.Type == "e2e_notification" {

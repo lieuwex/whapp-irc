@@ -178,7 +178,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	for _, c := range conn.Chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
 
-		if empty || !conn.caps.HasCapability("whapp-irc/replay") {
+		if empty || !conn.hasReplay() {
 			conn.timestampMap.Set(c.ID.String(), c.rawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
@@ -206,7 +206,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				continue
 			}
 
-			if err := conn.handleWhappMessage(msg); err != nil {
+			if err := conn.handleWhappMessageReplay(msg); err != nil {
 				log.Printf("error handling older whapp message: %s\n", err.Error())
 				continue
 			}
@@ -517,4 +517,8 @@ func (conn *Connection) saveDatabaseEntry() error {
 		log.Printf("error while updating user entry: %s\n", err.Error())
 	}
 	return err
+}
+
+func (conn *Connection) hasReplay() bool {
+	return conn.caps.HasCapability("whapp-irc/replay") || alternativeReplay
 }
