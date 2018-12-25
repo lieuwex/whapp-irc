@@ -139,7 +139,18 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 
 	if msg.QuotedMessageObject != nil {
 		message := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
-		line := "> " + strings.SplitN(message, "\n", 2)[0]
+		lines := strings.Split(message, "\n")
+
+		line := "> " + lines[0]
+		if nRest := len(lines) - 1; nRest > 0 {
+			line = fmt.Sprintf(
+				"%s [and %d more %s]",
+				line,
+				nRest,
+				plural(nRest, "line", "lines"),
+			)
+		}
+
 		str := formatPrivateMessage(senderSafeName, to, line)
 		if err := conn.writeIRC(msg.Time(), str); err != nil {
 			return err

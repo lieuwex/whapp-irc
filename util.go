@@ -66,3 +66,11 @@ func onInterrupt(fn func()) {
 		os.Exit(1)
 	}()
 }
+
+func plural(count int, singular, plural string) string {
+	if count == 1 || count == -1 {
+		return singular
+	}
+
+	return plural
+}
