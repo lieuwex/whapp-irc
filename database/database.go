@@ -29,9 +29,9 @@ func MakeDatabase(folder string) (*Database, error) {
 	}, nil
 }
 
-func (db *Database) GetItem(id string) (item interface{}, found bool, err error) {
+func (db *Database) GetItem(id string, output interface{}) (found bool, err error) {
 	if id == "" {
-		return nil, false, ErrIDEmpty
+		return false, ErrIDEmpty
 	}
 
 	readFile := func(id string) ([]byte, error) {
@@ -47,17 +47,13 @@ func (db *Database) GetItem(id string) (item interface{}, found bool, err error)
 	bytes, err := readFile(id)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, false, nil
+			return false, nil
 		}
 
-		return nil, false, err
+		return false, err
 	}
 
-	var res interface{}
-	if err := json.Unmarshal(bytes, &res); err != nil {
-		return nil, false, err
-	}
-	return res, true, nil
+	return true, json.Unmarshal(bytes, output)
 }
 
 func (db *Database) SaveItem(id string, item interface{}) error {

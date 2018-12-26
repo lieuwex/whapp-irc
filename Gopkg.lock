@@ -125,14 +125,6 @@
   revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
 
 [[projects]]
-  digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
-  name = "github.com/mitchellh/mapstructure"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
-  version = "v1.1.2"
-
-[[projects]]
   digest = "1:be88a46cd36136d9a0fbe8f42dffc269a62544e3a12ff3b047b4704f9b349b42"
   name = "github.com/mozillazg/go-unidecode"
   packages = [
@@ -207,7 +199,6 @@
     "github.com/chromedp/chromedp",
     "github.com/chromedp/chromedp/runner",
     "github.com/h2non/filetype",
-    "github.com/mitchellh/mapstructure",
     "github.com/mozillazg/go-unidecode",
     "github.com/skip2/go-qrcode",
     "golang.org/x/crypto/hkdf",

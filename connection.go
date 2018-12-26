@@ -16,7 +16,6 @@ import (
 	"whapp-irc/whapp"
 
 	"github.com/avast/retry-go"
-	"github.com/mitchellh/mapstructure"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
@@ -411,15 +410,11 @@ func (conn *Connection) setup() error {
 		return err
 	}
 
-	obj, found, err := userDb.GetItem(conn.nickname)
+	var user database.User
+	found, err := userDb.GetItem(conn.nickname, &user)
 	if err != nil {
 		return err
 	} else if found {
-		var user database.User
-		if err := mapstructure.Decode(obj, &user); err != nil {
-			return err
-		}
-
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
 
 		if _, err := conn.bridge.WI.Open(conn.bridge.ctx); err != nil {
