@@ -92,9 +92,7 @@ func main() {
 		panic(str)
 	}
 
-	if replayMode == "alternative" {
-		alternativeReplay = true
-	}
+	alternativeReplay = replayMode == "alternative"
 
 	var err error
 

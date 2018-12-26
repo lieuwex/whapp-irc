@@ -242,6 +242,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	go func() {
 		defer cancel()
 
+		// REVIEW: we use other `ctx`s here, is that correct?
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
 			conn.bridge.ctx,
 			500*time.Millisecond,
