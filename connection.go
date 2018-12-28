@@ -78,6 +78,11 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				return
 			}
 
+			if msg == nil {
+				log.Println("got invalid IRC message, ignoring")
+				continue
+			}
+
 			if msg.Command == "PING" {
 				str := ":whapp-irc PONG whapp-irc :" + msg.Params[0]
 				if err := conn.writeIRCNow(str); err != nil {
