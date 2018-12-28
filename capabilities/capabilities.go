@@ -46,10 +46,8 @@ func (cm *CapabilitiesMap) Caps() []string {
 	cm.m.RLock()
 	defer cm.m.RUnlock()
 
-	var res []string
-	for _, cap := range cm.caps {
-		res = append(res, cap)
-	}
+	res := make([]string, len(cm.caps))
+	copy(res, cm.caps)
 	return res
 }
 
