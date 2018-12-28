@@ -71,7 +71,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		decoder := irc.NewDecoder(bufio.NewReader(socket))
 		for {
 			msg, err := decoder.Decode()
-			if err != nil {
+			if err == io.EOF {
+				return
+			} else if err != nil {
 				log.Printf("error while listening for IRC messages: %s\n", err)
 				return
 			}
