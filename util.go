@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"mime"
 	"os"
 	"os/signal"
@@ -73,4 +74,9 @@ func plural(count int, singular, plural string) string {
 	}
 
 	return plural
+}
+
+func logMessage(time time.Time, from, to, message string) {
+	timeStr := time.Format("2006-01-02 15:04:05")
+	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)
 }

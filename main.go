@@ -22,12 +22,15 @@ const (
 	defaultReplayMode     = "normal"
 )
 
-var fs *files.FileServer
-var userDb *database.Database
-var loggingLevel whapp.LoggingLevel
-var mapProvider maps.Provider
-var startTime = time.Now()
-var alternativeReplay = false
+var (
+	fs           *files.FileServer
+	userDb       *database.Database
+	loggingLevel whapp.LoggingLevel
+	mapProvider  maps.Provider
+
+	startTime         = time.Now()
+	alternativeReplay = false
+)
 
 func handleSocket(socket *net.TCPConn) error {
 	conn, err := MakeConnection()
@@ -121,7 +124,7 @@ func main() {
 	for {
 		socket, err := listener.AcceptTCP()
 		if err != nil {
-			log.Printf("error accepting TCP connection: %#v", err)
+			log.Printf("error accepting TCP connection: %s", err)
 			continue
 		}
 

@@ -81,8 +81,6 @@ func (cm *CapabilitiesMap) StartedNegotiation() bool {
 }
 
 func (cm *CapabilitiesMap) WaitNegotiation() {
-	// REVIEW
-
 	if cm.StartedNegotiation() {
 		<-cm.negotiationFinishedChannel
 	}

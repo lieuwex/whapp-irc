@@ -20,11 +20,6 @@ import (
 	irc "gopkg.in/sorcix/irc.v2"
 )
 
-func logMessage(time time.Time, from, to, message string) {
-	timeStr := time.Format("2006-01-02 15:04:05")
-	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)
-}
-
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
 type Connection struct {
@@ -510,7 +505,7 @@ func (conn *Connection) saveDatabaseEntry() error {
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})
 	if err != nil {
-		log.Printf("error while updating user entry: %s\n", err.Error())
+		log.Printf("error while updating user entry: %s\n", err)
 	}
 	return err
 }

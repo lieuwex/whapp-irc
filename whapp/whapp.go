@@ -13,6 +13,8 @@ import (
 	"github.com/chromedp/chromedp/runner"
 )
 
+// TODO: wrap unknown chromedp errors in an error type.
+
 // Instance is an instance to Whatsapp Web.
 type Instance struct {
 	LoginState LoginState
@@ -348,6 +350,8 @@ func (wi *Instance) GetPhoneActive(ctx context.Context) (bool, error) {
 // ListenForPhoneActiveChange listens for changes in the user's phone
 // activity.
 func (wi *Instance) ListenForPhoneActiveChange(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
+	// REVIEW: does this actually work?
+
 	// REVIEW: is this still correct when we get logged out?
 
 	errCh := make(chan error)
