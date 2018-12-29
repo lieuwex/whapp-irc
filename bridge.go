@@ -19,13 +19,7 @@ func MakeBridge() *Bridge {
 	}
 
 	onInterrupt(func() {
-		if b.WI != nil {
-			b.WI.Shutdown(b.ctx)
-		}
-
-		if b.cancel != nil {
-			b.cancel()
-		}
+		b.Stop()
 	})
 
 	return b
@@ -54,6 +48,9 @@ func (b *Bridge) Stop() bool {
 		return false
 	}
 
+	if b.WI != nil {
+		b.WI.Shutdown(b.ctx)
+	}
 	b.cancel()
 
 	b.started = false
