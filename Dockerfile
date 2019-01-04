@@ -1,4 +1,4 @@
-FROM golang:1.10.1-alpine3.7 AS builder
+FROM golang:1.11.4-alpine3.7 AS builder
 
 RUN apk update && apk add git
 RUN go get -u github.com/golang/dep/cmd/dep
