@@ -11,7 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:997e2595f46a7c91127bc7ffe5c804a85f876014f3c84edcba79979e85aee43f"
+  digest = "1:20014bed95472b1c2cf0a46840a4d2e4c397a75c65e699792160d5b1bc661c28"
   name = "github.com/chromedp/cdproto"
   packages = [
     ".",
@@ -31,6 +31,7 @@
     "domsnapshot",
     "domstorage",
     "emulation",
+    "fetch",
     "headlessexperimental",
     "heapprofiler",
     "indexeddb",
@@ -56,7 +57,7 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "94e0acc3a5bf6bbec1d9a996a5443f37abfdd325"
+  revision = "c09467c16a87aa901a53d69a86563cef6dbcf475"
 
 [[projects]]
   digest = "1:13e2ffaa15cf117544a44b046c0438063047ee1b963ef9312ce7758c27cdaebc"
@@ -97,19 +98,19 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:901625a0300fa83074dcf2510424c26a19dc3edadf67b34ca45a78f879ac4b0c"
+  digest = "1:957b15d94d4771a424b6ccb959214fe8caafb7d791d0f588ac572b7cdc894457"
   name = "github.com/knq/snaker"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d9ad1e7f342a5b58202aa92c5f1106d7bb8b9c73"
+  revision = "2bc8a4db468777180ca38d551094b83073bed25f"
 
 [[projects]]
   branch = "master"
-  digest = "1:4bc4b80749499a818176b07698dc72025610f5570168a47a94ffd38709e4a5f0"
+  digest = "1:8cb15b21828b36ad568850d0ecb9340e22b148c8c6755f4a3d7918021bfc38a2"
   name = "github.com/knq/sysutil"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0218e141a794643e8c0fa283b9cd076fc0df662d"
+  revision = "f05b59f0f3075ba1bc5701ef0df4393a05ebd0e7"
 
 [[projects]]
   branch = "master"
@@ -137,7 +138,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bf1cb2d456a753d515d90e43c4b05afa4837e75d7808d1752607b91007ce25bb"
+  digest = "1:832d5f285d169c4caea95e28a0123b569cbd853e6cfd3d1189cfae9fcf38e82d"
   name = "github.com/skip2/go-qrcode"
   packages = [
     ".",
@@ -145,19 +146,19 @@
     "reedsolomon",
   ]
   pruneopts = "UT"
-  revision = "cf5f9fa2f0d847edb8e038db7ed975e239095e1a"
+  revision = "bcdd5e378222dd9f20da94a99c0101d30ebf3a50"
 
 [[projects]]
   branch = "master"
-  digest = "1:86f286e7afe01694ffd50bf9226ce2158a75ad099c03071be32b592d68115325"
+  digest = "1:8e4024a39f73657fda08fc46908003698955a5f1fdeba7ceb6801070720de922"
   name = "golang.org/x/crypto"
   packages = ["hkdf"]
   pruneopts = "UT"
-  revision = "e3636079e1a4c1f337f212cc5cd2aca108f6c900"
+  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
 
 [[projects]]
   branch = "master"
-  digest = "1:d3d337e91c35f337d548873978c858ecb723168a6303a41a3ba625c79094f899"
+  digest = "1:acadbbf02e5c744709c60ac929e63258a69a3404ab36ed0c1a245cc28f056220"
   name = "golang.org/x/image"
   packages = [
     "bmp",
@@ -165,7 +166,7 @@
     "tiff/lzw",
   ]
   pruneopts = "UT"
-  revision = "991ec62608f3c0da01d400756917825d1e2fd528"
+  revision = "cd38e8056d9b27bb2f265effa37fb0ea6b8a7f0f"
 
 [[projects]]
   digest = "1:1b9d6106326573c0212b29c1796f128271278474ed629055645ace928faaea67"
