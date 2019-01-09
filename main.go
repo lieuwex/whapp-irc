@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"whapp-irc/database"
@@ -14,12 +15,13 @@ import (
 )
 
 const (
-	defaultHost           = "localhost"
-	defaultFileServerPort = "3000"
-	defaultIRCPort        = "6060"
-	defaultLoggingLevel   = "normal"
-	defaultMapProvider    = "google-maps"
-	defaultReplayMode     = "normal"
+	defaultHost               = "localhost"
+	defaultFileServerPort     = "3000"
+	defaultFileServerUseHTTPS = "false"
+	defaultIRCPort            = "6060"
+	defaultLoggingLevel       = "normal"
+	defaultMapProvider        = "google-maps"
+	defaultReplayMode         = "normal"
 )
 
 var (
@@ -40,7 +42,7 @@ func handleSocket(socket *net.TCPConn) error {
 	return conn.BindSocket(socket)
 }
 
-func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider, replayMode string) {
+func readEnvVars() (host, fileServerPort, fileServerUseHTTPS, ircPort, logLevel, mapProvider, replayMode string) {
 	host = os.Getenv("HOST")
 	if host == "" {
 		host = defaultHost
@@ -49,6 +51,11 @@ func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider, replay
 	fileServerPort = os.Getenv("FILE_SERVER_PORT")
 	if fileServerPort == "" {
 		fileServerPort = defaultFileServerPort
+	}
+
+	fileServerUseHTTPS = os.Getenv("FILE_SERVER_HTTPS")
+	if fileServerPort == "" {
+		fileServerUseHTTPS = defaultFileServerUseHTTPS
 	}
 
 	ircPort = os.Getenv("IRC_SERVER_PORT")
@@ -75,7 +82,7 @@ func readEnvVars() (host, fileServerPort, ircPort, logLevel, mapProvider, replay
 }
 
 func main() {
-	host, fileServerPort, ircPort, levelRaw, mapProviderRaw, replayMode := readEnvVars()
+	host, fileServerPort, useHTTPSRaw, ircPort, levelRaw, mapProviderRaw, replayMode := readEnvVars()
 
 	switch strings.ToLower(levelRaw) {
 	case "verbose":
@@ -104,7 +111,12 @@ func main() {
 		panic(err)
 	}
 
-	fs, err = files.MakeFileServer(host, fileServerPort, "files")
+	useHTTPS, err := strconv.ParseBool(useHTTPSRaw)
+	if err != nil {
+		panic(err)
+	}
+
+	fs, err = files.MakeFileServer(host, fileServerPort, "files", useHTTPS)
 	if err != nil {
 		panic(err)
 	}

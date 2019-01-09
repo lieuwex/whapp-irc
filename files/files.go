@@ -18,6 +18,7 @@ type File struct {
 type FileServer struct {
 	Host      string
 	Port      string
+	UseHTTPS  bool
 	Directory string
 
 	httpServer *http.Server
@@ -26,10 +27,11 @@ type FileServer struct {
 	hashToPath map[string]*File
 }
 
-func MakeFileServer(host, port, dir string) (*FileServer, error) {
+func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) {
 	fs := &FileServer{
 		Host:      host,
 		Port:      port,
+		UseHTTPS:  useHTTPS,
 		Directory: dir,
 
 		hashToPath: make(map[string]*File),
@@ -112,11 +114,15 @@ func (fs *FileServer) makeFile(hash, ext string) *File {
 		fname = urlHash
 	}
 
+	protocol := "http"
+	if fs.UseHTTPS {
+		protocol = "https"
+	}
 	var url string
 	if fs.Port == "80" {
-		url = fmt.Sprintf("http://%s/%s", fs.Host, fname)
+		url = fmt.Sprintf("%s://%s/%s", protocol, fs.Host, fname)
 	} else {
-		url = fmt.Sprintf("http://%s:%s/%s", fs.Host, fs.Port, fname)
+		url = fmt.Sprintf("%s://%s:%s/%s", protocol, fs.Host, fs.Port, fname)
 	}
 
 	path := fmt.Sprintf("./%s/%s", fs.Directory, fname)
