@@ -108,7 +108,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	go fs.Start()
+	go func() {
+		if err := fs.Start(); err != nil {
+			log.Printf("error while starting fileserver: %s", err)
+		}
+	}()
 	defer fs.Stop()
 
 	addr, err := net.ResolveTCPAddr("tcp", ":"+ircPort)

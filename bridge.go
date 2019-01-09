@@ -5,6 +5,8 @@ import (
 	"whapp-irc/whapp"
 )
 
+// A Bridge represents the bridging between an IRC connection and a WhatsApp web
+// instance.
 type Bridge struct {
 	WI *whapp.Instance
 
@@ -13,6 +15,7 @@ type Bridge struct {
 	cancel  context.CancelFunc
 }
 
+// MakeBridge makes and returns a new Bridge instance.
 func MakeBridge() *Bridge {
 	b := &Bridge{
 		started: false,
@@ -31,7 +34,8 @@ func MakeBridge() *Bridge {
 	return b
 }
 
-func (b *Bridge) Start() (bool, error) {
+// Start starts the current bridge instance.
+func (b *Bridge) Start() (started bool, err error) {
 	if b.started {
 		return false, nil
 	}
@@ -49,7 +53,8 @@ func (b *Bridge) Start() (bool, error) {
 	return true, nil
 }
 
-func (b *Bridge) Stop() bool {
+// Stop stops the current bridge instance.
+func (b *Bridge) Stop() (stopped bool) {
 	if !b.started {
 		return false
 	}
@@ -60,6 +65,7 @@ func (b *Bridge) Stop() bool {
 	return true
 }
 
+// Restart restarts the current bridge instance.
 func (b *Bridge) Restart() {
 	b.Stop()
 	b.Start()

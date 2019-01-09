@@ -3,7 +3,7 @@ package lockmap
 import "sync"
 
 // A LockMap is used to lock various things represented by strings.
-// Items are never removed from the internal map, so LockaMap shouldn't be used
+// Items are never removed from the internal map, so a LockMap shouldn't be used
 // for a large amount of keys.
 type LockMap struct {
 	mutex sync.RWMutex

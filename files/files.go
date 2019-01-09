@@ -100,16 +100,16 @@ func (fs *FileServer) makeFile(hash, ext string) *File {
 		return nil
 	}
 
-	b32Hash, err := b64tob64url(hash)
+	urlHash, err := b64tob64url(hash)
 	if err != nil {
-		b32Hash = hash
+		urlHash = hash
 	}
 
 	var fname string
 	if ext != "" {
-		fname = b32Hash + "." + ext
+		fname = urlHash + "." + ext
 	} else {
-		fname = b32Hash
+		fname = urlHash
 	}
 
 	var url string

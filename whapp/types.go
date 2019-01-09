@@ -108,6 +108,8 @@ func (c Contact) GetName() string {
 	return str
 }
 
+// GetCommonGroups gets the groups both the logged-in user and the contact c are
+// in.
 func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, error) {
 	var res []Chat
 
@@ -417,7 +419,7 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 // chat.
 func (c Chat) SetAdmin(ctx context.Context, wi *Instance, userID ID, setAdmin bool) error {
 	str := fmt.Sprintf(
-		"whappGo.setAdmin(%s, %s, %d)",
+		"whappGo.setAdmin(%s, %s, %t)",
 		strconv.Quote(c.ID.String()),
 		strconv.Quote(userID.String()),
 		setAdmin,

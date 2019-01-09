@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 	"whapp-irc/capabilities"
-	"whapp-irc/database"
 	"whapp-irc/whapp"
 
 	"github.com/avast/retry-go"
@@ -22,6 +21,7 @@ import (
 
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
+// A Connection represents an IRC connection.
 type Connection struct {
 	Chats []*Chat
 
@@ -41,6 +41,7 @@ type Connection struct {
 	timestampMap *TimestampMap
 }
 
+// MakeConnection returns a new Connection instance.
 func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
@@ -52,6 +53,7 @@ func MakeConnection() (*Connection, error) {
 	}, nil
 }
 
+// BindSocket binds the given TCP connection to the current Connection instance.
 func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	defer socket.Close()
 	defer conn.bridge.Stop()
@@ -340,6 +342,7 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	return nil
 }
 
+// GetChatByID returns the chat with the given ID, if any.
 func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
 	for _, c := range conn.Chats {
 		if c.ID == ID {
@@ -349,6 +352,7 @@ func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
 	return nil
 }
 
+// GetChatByIdentifier returns the chat with the given identifier, if any.
 func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 	identifier = strings.ToLower(identifier)
 
@@ -407,13 +411,13 @@ func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
 	return chat, nil
 }
 
-// TODO: check if already setup
+// TODO: check if already set-up
 func (conn *Connection) setup() error {
 	if _, err := conn.bridge.Start(); err != nil {
 		return err
 	}
 
-	var user database.User
+	var user User
 	found, err := userDb.GetItem(conn.nickname, &user)
 	if err != nil {
 		return err
@@ -507,7 +511,7 @@ func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Pre
 }
 
 func (conn *Connection) saveDatabaseEntry() error {
-	err := userDb.SaveItem(conn.nickname, database.User{
+	err := userDb.SaveItem(conn.nickname, User{
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})

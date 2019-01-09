@@ -18,7 +18,7 @@ FROM alpine:3.7 AS runner
 RUN apk update
 
 # Install chromium
-RUN apk --no-cache --allow-untrusted add \
+RUN apk --no-cache add \
 	zlib-dev \
 	xvfb \
 	wait4ports \
@@ -31,7 +31,7 @@ RUN apk --no-cache --allow-untrusted add \
 	chromium
 
 # Install whapp-irc dependencies and copy whapp-irc
-RUN apk --no-cache --allow-untrusted add \
+RUN apk --no-cache add \
 	ca-certificates \
 	mailcap
 COPY --from=builder /go/src/whapp-irc /bin/
