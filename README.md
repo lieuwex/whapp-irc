@@ -63,3 +63,6 @@ dep ensure
 go build
 ./whapp-irc
 ```
+
+## support
+`#whapp-irc` on freenode, you can mention lieuwex if nobody responds.
