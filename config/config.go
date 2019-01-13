@@ -52,8 +52,12 @@ func ReadEnvVars() (Config, error) {
 	switch strings.ToLower(logLevelRaw) {
 	case "verbose":
 		logLevel = whapp.LogLevelVerbose
-	default:
+	case "normal":
 		logLevel = whapp.LogLevelNormal
+
+	default:
+		err := fmt.Errorf("no log level %s found", logLevelRaw)
+		return Config{}, err
 	}
 
 	var mapProvider maps.Provider
