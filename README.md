@@ -1,6 +1,8 @@
 # whapp-irc
 _a simple whatsapp web <-> irc gateway_
 
+[take a look at the quick and cool setting up guide](https://github.com/lieuwex/whapp-irc/wiki/Setting-up)
+
 ## information
 - private chats;
 - group chats, with op for admins;
