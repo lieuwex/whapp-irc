@@ -11,7 +11,7 @@ RUN dep ensure -vendor-only
 
 # Build whapp-irc
 COPY . .
-RUN go build -o whapp-irc
+RUN go build -o /bin/whapp-irc
 
 #####
 
@@ -37,7 +37,7 @@ RUN apk update \
 		/tmp/*
 
 # Copy whapp-irc
-COPY --from=builder /go/src/whapp-irc /bin/
+COPY --from=builder /bin/whapp-irc /bin/whapp-irc
 
 WORKDIR /root
 ENTRYPOINT ["/bin/whapp-irc"]
