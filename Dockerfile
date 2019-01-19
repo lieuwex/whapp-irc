@@ -11,7 +11,7 @@ RUN dep ensure -vendor-only
 
 # Build whapp-irc
 COPY . .
-RUN go build -o /bin/whapp-irc
+RUN go build -ldflags "-X main.commit=$(git rev-list -1 HEAD)" -o /bin/whapp-irc
 
 #####
 

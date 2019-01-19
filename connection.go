@@ -116,7 +116,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.nickname),
 			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.nickname, startTime),
 			fmt.Sprintf(":whapp-irc 004 %s :", conn.nickname),
-			fmt.Sprintf(":whapp-irc 375 %s :Enjoy the ride.", conn.nickname),
+			fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", conn.nickname, commit),
+			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.nickname),
 			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.nickname),
 		}); err != nil {
 			return false, err

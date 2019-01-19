@@ -21,6 +21,7 @@ var (
 	alternativeReplay bool
 
 	startTime = time.Now()
+	commit    string
 )
 
 func handleSocket(socket *net.TCPConn) error {
