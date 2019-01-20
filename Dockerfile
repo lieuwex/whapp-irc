@@ -10,7 +10,7 @@ WORKDIR /go/src/whapp-irc/
 RUN dep ensure -vendor-only
 
 # Apply chromedp patch
-COPY chromedp.patch .
+COPY chromedp.patch /go/src/whapp-irc/vendor/github.com/chromedp/chromedp/
 WORKDIR /go/src/whapp-irc/vendor/github.com/chromedp/chromedp/
 RUN cat chromedp.patch | patch -p1
 
