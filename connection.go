@@ -493,7 +493,10 @@ func (conn *Connection) setup() error {
 	}
 	for _, chat := range chats {
 		if _, err := conn.addChat(chat); err != nil {
-			return err
+			str := fmt.Sprintf("error while converting chat with ID %s, skipping", chat.ID)
+			conn.status(str)
+			log.Printf(str + " error: " + err.Error())
+			continue
 		}
 	}
 
