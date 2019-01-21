@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:b28b250b648609be14e0fa4a220b9b991ccaf7b1226781fd9d6e4dd6f4e086fd"
-  name = "github.com/avast/retry-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
-  version = "1.0.2"
-
-[[projects]]
   branch = "master"
   digest = "1:62a9ab7cd0f67d352d8850ef058f8cea182ac77bec4ffacfcbbe18d2d25b94f1"
   name = "github.com/chromedp/cdproto"
@@ -196,7 +188,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/avast/retry-go",
     "github.com/chromedp/cdproto/runtime",
     "github.com/chromedp/chromedp",
     "github.com/chromedp/chromedp/runner",

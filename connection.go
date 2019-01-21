@@ -14,7 +14,6 @@ import (
 	"whapp-irc/capabilities"
 	"whapp-irc/whapp"
 
-	"github.com/avast/retry-go"
 	qrcode "github.com/skip2/go-qrcode"
 	irc "gopkg.in/sorcix/irc.v2"
 )
@@ -164,15 +163,8 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 
 		conn.welcomed = true
 
-		err = retry.Do(func() error {
-			conn.bridge.Stop()
-			err := conn.setup()
-			if err != nil {
-				log.Printf("err while setting up: %s\n", err.Error())
-			}
-			return err
-		}, retry.Attempts(5), retry.Delay(time.Second))
-		if err != nil {
+		if err := conn.setup(); err != nil {
+			log.Printf("err while setting up: %s\n", err.Error())
 			return false, err
 		}
 
