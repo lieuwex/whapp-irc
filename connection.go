@@ -19,6 +19,10 @@ import (
 	irc "gopkg.in/sorcix/irc.v2"
 )
 
+// queue up to ten irc messages, this is especially helpful to answer PINGs in
+// time, and during connection setup.
+const ircMessageQueueSize = 10
+
 var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
 // A Connection represents an IRC connection.
@@ -61,7 +65,7 @@ func (conn *Connection) stop() {
 // this function also handles IRC commands which are independent of the rest of
 // whapp-irc, such as PINGs.
 func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
-	ircCh := make(chan *irc.Message)
+	ircCh := make(chan *irc.Message, ircMessageQueueSize)
 
 	go func() {
 		defer close(ircCh)
@@ -126,6 +130,7 @@ func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
 // BindSocket binds the given TCP connection to the current Connection instance.
 func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	defer conn.stop()
+	// bind socket and create a context
 	ctx := func() context.Context {
 		ctx, cancel := context.WithCancel(context.Background())
 		conn.socket = socket
@@ -332,7 +337,6 @@ nickWait:
 					continue
 				}
 			}
-
 		}
 	}()
 
