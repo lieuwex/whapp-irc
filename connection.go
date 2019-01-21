@@ -36,7 +36,7 @@ type Connection struct {
 
 	bridge *Bridge
 	socket *net.TCPConn
-	cancel context.CancelFunc
+	stop   context.CancelFunc
 
 	welcomed bool
 
@@ -48,17 +48,12 @@ type Connection struct {
 // MakeConnection returns a new Connection instance.
 func MakeConnection() (*Connection, error) {
 	return &Connection{
+		caps: capabilities.MakeCapabilitiesMap(),
+
 		bridge: MakeBridge(),
 
-		caps:         capabilities.MakeCapabilitiesMap(),
 		timestampMap: MakeTimestampMap(),
 	}, nil
-}
-
-func (conn *Connection) stop() {
-	conn.socket.Close()
-	conn.bridge.Stop()
-	conn.cancel()
 }
 
 // listen for and parse messages.
@@ -79,9 +74,7 @@ func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
 			} else if err != nil {
 				log.Printf("error while listening for IRC messages: %s\n", err)
 				return
-			}
-
-			if msg == nil {
+			} else if msg == nil {
 				log.Println("got invalid IRC message, ignoring")
 				continue
 			}
@@ -130,14 +123,30 @@ func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
 
 // BindSocket binds the given TCP connection to the current Connection instance.
 func (conn *Connection) BindSocket(socket *net.TCPConn) error {
-	defer conn.stop()
-	// bind socket and create a context
+	conn.socket = socket
+
+	// create context and bind cancel function to connection
 	ctx := func() context.Context {
 		ctx, cancel := context.WithCancel(context.Background())
-		conn.socket = socket
-		conn.cancel = cancel
+		conn.stop = cancel
+
+		// wait until the context or bridge context has been cancelled, then we
+		// will just close every connection we have.
+		go func() {
+			select {
+			case <-ctx.Done():
+			// this is actually kind rough, but it seems to work better
+			// currently...
+			case <-conn.bridge.ctx.Done():
+			}
+
+			conn.socket.Close()
+			conn.bridge.Stop()
+		}()
+
 		return ctx
 	}()
+	defer conn.stop()
 
 	ircCh := conn.listenIRC(ctx)
 
@@ -209,7 +218,7 @@ nickWait:
 
 	// actually handle most of the IRC messages
 	go func() {
-		defer conn.cancel()
+		defer conn.stop()
 
 		for {
 			select {
@@ -236,6 +245,9 @@ nickWait:
 	// we want to wait until we've finished negotiation, since when we send a
 	// replay we want to know if the user has servertime and even if they want a
 	// replay at all.
+	// if negotiation hasn't started yet, we just skip through (we figure the
+	// client doesn't support IRCv3, since normally negotiation occurs fairly
+	// early in the connection)
 	conn.caps.WaitNegotiation()
 
 	// replay older messages
@@ -312,6 +324,11 @@ nickWait:
 		defer conn.stop()
 
 		// REVIEW: we use other `ctx`s here, is that correct?
+		// TODO: It looks like we should have to restart this, a bridge should
+		// have closer grasp of whatever messages should be sent. Currently a
+		// bridge is loosly defined of whatever it does. The struct itself
+		// should provide more functions, and we should do less. In a prefect
+		// world, WI isn't exposed.
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
 			conn.bridge.ctx,
 			500*time.Millisecond,
@@ -348,6 +365,7 @@ nickWait:
 }
 
 func (conn *Connection) joinChat(chat *Chat) error {
+	// sanity checks
 	if chat == nil {
 		return fmt.Errorf("chat is nil")
 	} else if !chat.IsGroupChat {
@@ -356,16 +374,19 @@ func (conn *Connection) joinChat(chat *Chat) error {
 		return nil
 	}
 
+	// identifier sanity check
 	identifier := chat.Identifier()
 	if identifier == "" || identifier == "#" {
 		return fmt.Errorf("chat.Identifier() is empty, chat.Name is %s", chat.Name)
 	}
 
+	// send JOIN to client
 	str := fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier)
 	if err := conn.writeIRCNow(str); err != nil {
 		return err
 	}
 
+	// send chat name and description (if any) as topic
 	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name)
 	if desc := chat.rawChat.Description; desc != nil {
 		if d := strings.TrimSpace(desc.Description); d != "" {
@@ -377,6 +398,7 @@ func (conn *Connection) joinChat(chat *Chat) error {
 		return err
 	}
 
+	// send chat members to client
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
 		if participant.Contact.IsMe {
@@ -393,7 +415,6 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 		names = append(names, prefix+participant.SafeName())
 	}
-
 	str = fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " "))
 	if err := conn.writeIRCNow(str); err != nil {
 		return err

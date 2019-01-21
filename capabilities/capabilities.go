@@ -6,18 +6,19 @@ import (
 )
 
 type CapabilitiesMap struct {
+	finishedCh chan bool
+
 	m sync.RWMutex
 
-	startedNegotiation         bool
-	negotiationFinished        bool
-	negotiationFinishedChannel chan bool
+	started  bool
+	finished bool
 
 	caps []string
 }
 
 func MakeCapabilitiesMap() *CapabilitiesMap {
 	return &CapabilitiesMap{
-		negotiationFinishedChannel: make(chan bool),
+		finishedCh: make(chan bool),
 	}
 }
 
@@ -51,23 +52,28 @@ func (cm *CapabilitiesMap) Caps() []string {
 	return res
 }
 
-func (cm *CapabilitiesMap) StartNegotiation() {
+func (cm *CapabilitiesMap) StartNegotiation() bool {
 	cm.m.Lock()
 	defer cm.m.Unlock()
 
-	cm.startedNegotiation = true
+	if cm.started || cm.finished {
+		return false
+	}
+
+	cm.started = true
+	return true
 }
 
 func (cm *CapabilitiesMap) FinishNegotiation() bool {
 	cm.m.Lock()
 	defer cm.m.Unlock()
 
-	if cm.negotiationFinished {
+	if cm.finished {
 		return false
 	}
 
-	cm.negotiationFinished = true
-	close(cm.negotiationFinishedChannel)
+	cm.finished = true
+	close(cm.finishedCh)
 	return true
 }
 
@@ -75,11 +81,11 @@ func (cm *CapabilitiesMap) StartedNegotiation() bool {
 	cm.m.RLock()
 	defer cm.m.RUnlock()
 
-	return cm.startedNegotiation
+	return cm.started
 }
 
 func (cm *CapabilitiesMap) WaitNegotiation() {
 	if cm.StartedNegotiation() {
-		<-cm.negotiationFinishedChannel
+		<-cm.finishedCh
 	}
 }

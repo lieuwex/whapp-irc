@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"time"
 	"whapp-irc/whapp"
 )
 
@@ -17,21 +18,9 @@ type Bridge struct {
 
 // MakeBridge makes and returns a new Bridge instance.
 func MakeBridge() *Bridge {
-	b := &Bridge{
+	return &Bridge{
 		started: false,
 	}
-
-	onInterrupt(func() {
-		if b.WI != nil {
-			b.WI.Shutdown(b.ctx)
-		}
-
-		if b.cancel != nil {
-			b.cancel()
-		}
-	})
-
-	return b
 }
 
 // Start starts the current bridge instance.
@@ -42,7 +31,7 @@ func (b *Bridge) Start() (started bool, err error) {
 
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 
-	wi, err := whapp.MakeInstance(b.ctx, chromePath, true, loggingLevel)
+	wi, err := whapp.MakeInstance(b.ctx, true, loggingLevel)
 	if err != nil {
 		return false, err
 	}
@@ -61,12 +50,13 @@ func (b *Bridge) Stop() (stopped bool) {
 
 	b.cancel()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	b.cancel = cancel
+	if err := b.WI.Shutdown(ctx); err != nil {
+		// TODO: how do we handle this?
+		println("error while shutting down: " + err.Error())
+	}
+
 	b.started = false
 	return true
-}
-
-// Restart restarts the current bridge instance.
-func (b *Bridge) Restart() {
-	b.Stop()
-	b.Start()
 }

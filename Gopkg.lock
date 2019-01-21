@@ -11,7 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:81217c8207d1fbf7d54775662c415d1a5f957346e63393f9d49328a1ca696931"
+  digest = "1:62a9ab7cd0f67d352d8850ef058f8cea182ac77bec4ffacfcbbe18d2d25b94f1"
   name = "github.com/chromedp/cdproto"
   packages = [
     ".",
@@ -58,7 +58,7 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "8e3eef48e6c806d0d3ca5be66f393661a191e2cd"
+  revision = "9b7c4215ad231057bb970caf9a70dded7a03dd7d"
 
 [[projects]]
   digest = "1:13e2ffaa15cf117544a44b046c0438063047ee1b963ef9312ce7758c27cdaebc"
@@ -167,7 +167,7 @@
     "tiff/lzw",
   ]
   pruneopts = "UT"
-  revision = "cd38e8056d9b27bb2f265effa37fb0ea6b8a7f0f"
+  revision = "183bebdce1b249c42a7cf6772817e8c2e873b966"
 
 [[projects]]
   digest = "1:1b9d6106326573c0212b29c1796f128271278474ed629055645ace928faaea67"

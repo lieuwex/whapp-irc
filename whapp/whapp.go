@@ -26,13 +26,10 @@ type Instance struct {
 // MakeInstance makes a new Instance.
 func MakeInstance(
 	ctx context.Context,
-	chromePath string,
 	headless bool,
 	loggingLevel LoggingLevel,
 ) (*Instance, error) {
 	options := chromedp.WithRunnerOptions(
-		runner.Path(chromePath),
-
 		runner.KillProcessGroup,
 		runner.ForceKill,
 
@@ -46,14 +43,14 @@ func MakeInstance(
 		runner.UserAgent(userAgent),
 	)
 
-	var cdp *chromedp.CDP
-	var err error
-	switch loggingLevel {
-	case LogLevelVerbose:
-		cdp, err = chromedp.New(ctx, options, chromedp.WithLog(log.Printf))
-	default:
-		cdp, err = chromedp.New(ctx, options)
-	}
+	cdp, err := func() (*chromedp.CDP, error) {
+		switch loggingLevel {
+		case LogLevelVerbose:
+			return chromedp.New(ctx, options, chromedp.WithLog(log.Printf))
+		default:
+			return chromedp.New(ctx, options)
+		}
+	}()
 	if err != nil {
 		return nil, err
 	}
