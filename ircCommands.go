@@ -32,6 +32,15 @@ func (conn *Connection) writeIRCNow(msg string) error {
 	return conn.writeIRC(time.Now(), msg)
 }
 
+func (conn *Connection) writeIRCListNow(messages []string) error {
+	for _, msg := range messages {
+		if err := conn.writeIRCNow(msg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (conn *Connection) status(body string) error {
 	logMessage(time.Now(), "status", conn.nickname, body)
 	msg := formatPrivateMessage("status", conn.nickname, body)
@@ -47,27 +56,6 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 	status := conn.status
 
 	switch msg.Command {
-	case "CAP":
-		conn.caps.StartNegotiation()
-		switch msg.Params[0] {
-		case "LS":
-			write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
-
-		case "LIST":
-			caps := conn.caps.Caps()
-			write(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
-
-		case "REQ":
-			for _, cap := range strings.Split(msg.Trailing(), " ") {
-				conn.caps.AddCapability(cap)
-			}
-			caps := conn.caps.Caps()
-			write(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
-
-		case "END":
-			conn.caps.FinishNegotiation()
-		}
-
 	case "PRIVMSG":
 		to := msg.Params[0]
 

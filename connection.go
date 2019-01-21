@@ -32,9 +32,9 @@ type Connection struct {
 
 	bridge *Bridge
 	socket *net.TCPConn
+	cancel context.CancelFunc
 
-	welcomed  bool
-	welcomeCh chan bool
+	welcomed bool
 
 	localStorage map[string]string
 
@@ -46,31 +46,28 @@ func MakeConnection() (*Connection, error) {
 	return &Connection{
 		bridge: MakeBridge(),
 
-		welcomeCh: make(chan bool),
-
 		caps:         capabilities.MakeCapabilitiesMap(),
 		timestampMap: MakeTimestampMap(),
 	}, nil
 }
 
-// BindSocket binds the given TCP connection to the current Connection instance.
-func (conn *Connection) BindSocket(socket *net.TCPConn) error {
-	defer socket.Close()
-	defer conn.bridge.Stop()
+func (conn *Connection) stop() {
+	conn.socket.Close()
+	conn.bridge.Stop()
+	conn.cancel()
+}
 
-	conn.socket = socket
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// listen for and parse messages.
-	// we want to do this outside the next irc message handle loop, so we can
-	// reply to PINGs but not handle stuff like JOINs yet.
+// listen for and parse messages.
+// this function also handles IRC commands which are independent of the rest of
+// whapp-irc, such as PINGs.
+func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
 	ircCh := make(chan *irc.Message)
+
 	go func() {
 		defer close(ircCh)
 
-		decoder := irc.NewDecoder(bufio.NewReader(socket))
+		write := conn.writeIRCNow
+		decoder := irc.NewDecoder(bufio.NewReader(conn.socket))
 		for {
 			msg, err := decoder.Decode()
 			if err == io.EOF {
@@ -85,33 +82,66 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 				continue
 			}
 
-			if msg.Command == "PING" {
+			switch msg.Command {
+			case "PING":
 				str := ":whapp-irc PONG whapp-irc :" + msg.Params[0]
 				if err := conn.writeIRCNow(str); err != nil {
+					log.Printf("error while sending PONG: %s", err)
 					return
 				}
-				continue
-			}
+			case "QUIT":
+				log.Printf("received QUIT from %s", conn.nickname)
+				return
 
-			ircCh <- msg
+			case "CAP":
+				conn.caps.StartNegotiation()
+				switch msg.Params[0] {
+				case "LS":
+					write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
+
+				case "LIST":
+					caps := conn.caps.Caps()
+					write(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
+
+				case "REQ":
+					for _, cap := range strings.Split(msg.Trailing(), " ") {
+						conn.caps.AddCapability(cap)
+					}
+					caps := conn.caps.Caps()
+					write(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
+
+				case "END":
+					conn.caps.FinishNegotiation()
+				}
+
+			default:
+				ircCh <- msg
+			}
 		}
 	}()
 
-	writeListNow := func(messages []string) error {
-		for _, msg := range messages {
-			if err := conn.writeIRCNow(msg); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
+	return ircCh
+}
 
+// BindSocket binds the given TCP connection to the current Connection instance.
+func (conn *Connection) BindSocket(socket *net.TCPConn) error {
+	defer conn.stop()
+	ctx := func() context.Context {
+		ctx, cancel := context.WithCancel(context.Background())
+		conn.socket = socket
+		conn.cancel = cancel
+		return ctx
+	}()
+
+	ircCh := conn.listenIRC(ctx)
+
+	// welcome will send the welcome message to the user and setup the bridge.
 	welcome := func() (setup bool, err error) {
 		if conn.welcomed || conn.nickname == "" {
 			return false, nil
 		}
 
-		if err := writeListNow([]string{
+		if err := conn.writeIRCListNow([]string{
 			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.nickname, conn.nickname),
 			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.nickname),
 			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.nickname, startTime),
@@ -137,12 +167,43 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			return false, err
 		}
 
-		close(conn.welcomeCh)
 		return true, nil
 	}
 
+	// wait for the client to send a nickname
+nickWait:
+	for {
+		select {
+		case <-ctx.Done():
+			conn.stop()
+			return ctx.Err()
+		case msg, ok := <-ircCh:
+			if !ok {
+				conn.stop()
+				return ctx.Err()
+			}
+
+			if msg.Command != "NICK" {
+				log.Printf("unexpected IRC command, expected NICK, got %s", msg.Command)
+				continue
+			}
+
+			conn.nickname = msg.Params[0]
+			if _, err := welcome(); err != nil {
+				conn.status("giving up trying to setup whapp bridge: " + err.Error())
+				conn.stop()
+				return ctx.Err()
+			}
+
+			break nickWait
+		}
+	}
+
+	// now that we have set-up the bridge...
+
+	// actually handle most of the IRC messages
 	go func() {
-		defer cancel()
+		defer conn.cancel()
 
 		for {
 			select {
@@ -152,15 +213,6 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 			case msg, ok := <-ircCh:
 				if !ok {
 					return
-				}
-
-				if msg.Command == "NICK" {
-					conn.nickname = msg.Params[0]
-					if _, err := welcome(); err != nil {
-						conn.status("giving up trying to setup whapp bridge: " + err.Error())
-						return
-					}
-					continue
 				}
 
 				if err := conn.handleIRCCommand(msg); err != nil {
@@ -175,9 +227,12 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
-	<-conn.welcomeCh
+	// we want to wait until we've finished negotiation, since when we send a
+	// replay we want to know if the user has servertime and even if they want a
+	// replay at all.
 	conn.caps.WaitNegotiation()
 
+	// replay older messages
 	empty := conn.timestampMap.Length() == 0
 	for _, c := range conn.Chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
@@ -218,8 +273,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 	conn.status("ready for new messages")
 
+	// handle logging out on whatsapp web, this happens when the user removes
+	// the bridge client on their phone.
 	go func() {
-		defer cancel()
+		defer conn.stop()
 
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
 
@@ -244,8 +301,9 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
+	// listen for new WhatsApp messages
 	go func() {
-		defer cancel()
+		defer conn.stop()
 
 		// REVIEW: we use other `ctx`s here, is that correct?
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
@@ -278,6 +336,7 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		}
 	}()
 
+	// now just wait until we have to shutdown.
 	<-ctx.Done()
 	log.Printf("connection ended: %s\n", ctx.Err())
 	return nil
