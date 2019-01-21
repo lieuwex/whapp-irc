@@ -95,6 +95,7 @@ func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
 				}
 			case "QUIT":
 				log.Printf("received QUIT from %s", conn.nickname)
+				conn.stop() // REVIEW: is this ugly?
 				return
 
 			case "CAP":
