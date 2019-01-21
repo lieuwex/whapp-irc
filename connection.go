@@ -130,16 +130,10 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		conn.stop = cancel
 
-		// wait until the context or bridge context has been cancelled, then we
-		// will just close every connection we have.
+		// wait until the context, then we will just close every connection we
+		// have.
 		go func() {
-			select {
-			case <-ctx.Done():
-			// this is actually kind rough, but it seems to work better
-			// currently...
-			case <-conn.bridge.ctx.Done():
-			}
-
+			<-ctx.Done()
 			conn.socket.Close()
 			conn.bridge.Stop()
 		}()
@@ -502,6 +496,13 @@ func (conn *Connection) setup() error {
 	if _, err := conn.bridge.Start(); err != nil {
 		return err
 	}
+
+	go func() {
+		// this is actually kind rough, but it seems to work better
+		// currently...
+		<-conn.bridge.ctx.Done()
+		conn.stop()
+	}()
 
 	var user User
 	found, err := userDb.GetItem(conn.nickname, &user)
