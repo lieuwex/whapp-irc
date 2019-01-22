@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -11,11 +10,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"whapp-irc/capabilities"
+	"whapp-irc/ircConnection"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
-	irc "gopkg.in/sorcix/irc.v2"
 )
 
 // queue up to ten irc messages, this is especially helpful to answer PINGs in
@@ -28,14 +26,10 @@ var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 type Connection struct {
 	Chats []*Chat
 
-	nickname string
-	me       whapp.Me
-
-	caps *capabilities.CapabilitiesMap
+	me whapp.Me
 
 	bridge *Bridge
-	socket *net.TCPConn
-	stop   context.CancelFunc
+	irc    *ircConnection.IRCConnection
 
 	welcomed bool
 
@@ -44,126 +38,50 @@ type Connection struct {
 	timestampMap *TimestampMap
 }
 
-// MakeConnection returns a new Connection instance.
-func MakeConnection() (*Connection, error) {
-	return &Connection{
-		caps: capabilities.MakeCapabilitiesMap(),
-
+// BindSocket binds the given TCP connection.
+func BindSocket(socket *net.TCPConn) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	conn := &Connection{
 		bridge: MakeBridge(),
+		irc:    ircConnection.HandleConnection(ctx, socket),
 
 		timestampMap: MakeTimestampMap(),
-	}, nil
-}
-
-// listen for and parse messages.
-// this function also handles IRC commands which are independent of the rest of
-// whapp-irc, such as PINGs.
-func (conn *Connection) listenIRC(ctx context.Context) <-chan *irc.Message {
-	ircCh := make(chan *irc.Message, ircMessageQueueSize)
+	}
 
 	go func() {
-		defer close(ircCh)
-
-		write := conn.writeIRCNow
-		decoder := irc.NewDecoder(bufio.NewReader(conn.socket))
-		for {
-			msg, err := decoder.Decode()
-			if err == io.EOF {
-				return
-			} else if err != nil {
-				log.Printf("error while listening for IRC messages: %s\n", err)
-				return
-			} else if msg == nil {
-				log.Println("got invalid IRC message, ignoring")
-				continue
-			}
-
-			switch msg.Command {
-			case "PING":
-				str := ":whapp-irc PONG whapp-irc :" + msg.Params[0]
-				if err := conn.writeIRCNow(str); err != nil {
-					log.Printf("error while sending PONG: %s", err)
-					return
-				}
-			case "QUIT":
-				log.Printf("received QUIT from %s", conn.nickname)
-				conn.stop() // REVIEW: is this ugly?
-				return
-
-			case "CAP":
-				conn.caps.StartNegotiation()
-				switch msg.Params[0] {
-				case "LS":
-					write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
-
-				case "LIST":
-					caps := conn.caps.Caps()
-					write(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
-
-				case "REQ":
-					for _, cap := range strings.Split(msg.Trailing(), " ") {
-						conn.caps.AddCapability(cap)
-					}
-					caps := conn.caps.Caps()
-					write(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
-
-				case "END":
-					conn.caps.FinishNegotiation()
-				}
-
-			default:
-				ircCh <- msg
-			}
+		select {
+		// when irc connection dies, cancel context
+		case <-conn.irc.StopChannel():
+			cancel()
+		case <-ctx.Done():
 		}
+
+		// when the context is cancelled, kill everything off
+		conn.irc.Close()
+		conn.bridge.Stop()
 	}()
-
-	return ircCh
-}
-
-// BindSocket binds the given TCP connection to the current Connection instance.
-func (conn *Connection) BindSocket(socket *net.TCPConn) error {
-	conn.socket = socket
-
-	// create context and bind cancel function to connection
-	ctx := func() context.Context {
-		ctx, cancel := context.WithCancel(context.Background())
-		conn.stop = cancel
-
-		// wait until the context, then we will just close every connection we
-		// have.
-		go func() {
-			<-ctx.Done()
-			conn.socket.Close()
-			conn.bridge.Stop()
-		}()
-
-		return ctx
-	}()
-	defer conn.stop()
-
-	ircCh := conn.listenIRC(ctx)
 
 	// welcome will send the welcome message to the user and setup the bridge.
 	welcome := func() (setup bool, err error) {
-		if conn.welcomed || conn.nickname == "" {
+		if conn.welcomed || conn.irc.Nick() == "" {
 			return false, nil
 		}
 
-		if err := conn.writeIRCListNow([]string{
-			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.nickname, conn.nickname),
-			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.nickname),
-			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.nickname, startTime),
-			fmt.Sprintf(":whapp-irc 004 %s :", conn.nickname),
-			fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", conn.nickname, commit),
-			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.nickname),
-			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.nickname),
+		if err := conn.irc.WriteListNow([]string{
+			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.irc.Nick(), conn.irc.Nick()),
+			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.irc.Nick()),
+			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.irc.Nick(), startTime),
+			fmt.Sprintf(":whapp-irc 004 %s :", conn.irc.Nick()),
+			fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", conn.irc.Nick(), commit),
+			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.irc.Nick()),
+			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.irc.Nick()),
 		}); err != nil {
 			return false, err
 		}
 
 		conn.welcomed = true
 
-		if err := conn.setup(); err != nil {
+		if err := conn.setup(cancel); err != nil {
 			log.Printf("err while setting up: %s\n", err.Error())
 			return false, err
 		}
@@ -172,46 +90,32 @@ func (conn *Connection) BindSocket(socket *net.TCPConn) error {
 	}
 
 	// wait for the client to send a nickname
-nickWait:
-	for {
-		select {
-		case <-ctx.Done():
-			conn.stop()
-			return ctx.Err()
-		case msg, ok := <-ircCh:
-			if !ok {
-				conn.stop()
-				return ctx.Err()
-			}
+	select {
+	case <-ctx.Done():
+		cancel()
+		return ctx.Err()
+	case <-conn.irc.NickSetChannel():
+	}
 
-			if msg.Command != "NICK" {
-				log.Printf("unexpected IRC command, expected NICK, got %s", msg.Command)
-				continue
-			}
-
-			conn.nickname = msg.Params[0]
-			if _, err := welcome(); err != nil {
-				conn.status("giving up trying to setup whapp bridge: " + err.Error())
-				conn.stop()
-				return ctx.Err()
-			}
-
-			break nickWait
-		}
+	if _, err := welcome(); err != nil {
+		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
+		cancel()
+		return ctx.Err()
 	}
 
 	// now that we have set-up the bridge...
 
 	// actually handle most of the IRC messages
 	go func() {
-		defer conn.stop()
+		defer cancel()
+		ircReceiveCh := conn.irc.ReceiveChannel()
 
 		for {
 			select {
 			case <-ctx.Done():
 				return
 
-			case msg, ok := <-ircCh:
+			case msg, ok := <-ircReceiveCh:
 				if !ok {
 					return
 				}
@@ -234,7 +138,7 @@ nickWait:
 	// if negotiation hasn't started yet, we just skip through (we figure the
 	// client doesn't support IRCv3, since normally negotiation occurs fairly
 	// early in the connection)
-	conn.caps.WaitNegotiation()
+	conn.irc.Caps.WaitNegotiation()
 
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0
@@ -275,12 +179,13 @@ nickWait:
 			}
 		}
 	}
-	conn.status("ready for new messages")
+
+	conn.irc.Status("ready for new messages")
 
 	// handle logging out on whatsapp web, this happens when the user removes
 	// the bridge client on their phone.
 	go func() {
-		defer conn.stop()
+		defer cancel()
 
 		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
 
@@ -307,7 +212,7 @@ nickWait:
 
 	// listen for new WhatsApp messages
 	go func() {
-		defer conn.stop()
+		defer cancel()
 
 		// REVIEW: we use other `ctx`s here, is that correct?
 		// TODO: It looks like we should have to restart this, a bridge should
@@ -367,29 +272,27 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	}
 
 	// send JOIN to client
-	str := fmt.Sprintf(":%s JOIN %s", conn.nickname, identifier)
-	if err := conn.writeIRCNow(str); err != nil {
+	str := fmt.Sprintf(":%s JOIN %s", conn.irc.Nick(), identifier)
+	if err := conn.irc.WriteNow(str); err != nil {
 		return err
 	}
 
 	// send chat name and description (if any) as topic
-	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.nickname, identifier, chat.Name)
+	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.irc.Nick(), identifier, chat.Name)
 	if desc := chat.rawChat.Description; desc != nil {
 		if d := strings.TrimSpace(desc.Description); d != "" {
 			d = strings.Replace(d, "\n", " ", -1)
 			topic = fmt.Sprintf("%s: %s", topic, d)
 		}
 	}
-	if err := conn.writeIRCNow(topic); err != nil {
-		return err
-	}
+	conn.irc.WriteNow(topic)
 
 	// send chat members to client
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
 		if participant.Contact.IsMe {
 			if participant.IsAdmin {
-				conn.writeIRCNow(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.nickname))
+				conn.irc.WriteNow(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.irc.Nick()))
 			}
 			continue
 		}
@@ -401,12 +304,12 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 		names = append(names, prefix+participant.SafeName())
 	}
-	str = fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.nickname, identifier, strings.Join(names, " "))
-	if err := conn.writeIRCNow(str); err != nil {
+	str = fmt.Sprintf(":whapp-irc 353 %s @ %s :%s", conn.irc.Nick(), identifier, strings.Join(names, " "))
+	if err := conn.irc.WriteNow(str); err != nil {
 		return err
 	}
-	str = fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.nickname, identifier)
-	if err := conn.writeIRCNow(str); err != nil {
+	str = fmt.Sprintf(":whapp-irc 366 %s %s :End of /NAMES list.", conn.irc.Nick(), identifier)
+	if err := conn.irc.WriteNow(str); err != nil {
 		return err
 	}
 
@@ -484,7 +387,7 @@ func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
 }
 
 // TODO: check if already set-up
-func (conn *Connection) setup() error {
+func (conn *Connection) setup(cancel context.CancelFunc) error {
 	if _, err := conn.bridge.Start(); err != nil {
 		return err
 	}
@@ -493,11 +396,11 @@ func (conn *Connection) setup() error {
 		// this is actually kind rough, but it seems to work better
 		// currently...
 		<-conn.bridge.ctx.Done()
-		conn.stop()
+		cancel()
 	}()
 
 	var user User
-	found, err := userDb.GetItem(conn.nickname, &user)
+	found, err := userDb.GetItem(conn.irc.Nick(), &user)
 	if err != nil {
 		return err
 	} else if found {
@@ -541,7 +444,7 @@ func (conn *Connection) setup() error {
 			}
 		}()
 
-		if err := conn.status("Scan this QR code: " + qrFile.URL); err != nil {
+		if err := conn.irc.Status("Scan this QR code: " + qrFile.URL); err != nil {
 			return err
 		}
 	}
@@ -549,7 +452,7 @@ func (conn *Connection) setup() error {
 	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
 		return err
 	}
-	conn.status("logged in")
+	conn.irc.Status("logged in")
 
 	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(conn.bridge.ctx)
 	if err != nil {
@@ -572,7 +475,7 @@ func (conn *Connection) setup() error {
 	for _, chat := range chats {
 		if _, err := conn.addChat(chat); err != nil {
 			str := fmt.Sprintf("error while converting chat with ID %s, skipping", chat.ID)
-			conn.status(str)
+			conn.irc.Status(str)
 			log.Printf(str + " error: " + err.Error())
 			continue
 		}
@@ -593,7 +496,7 @@ func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Pre
 }
 
 func (conn *Connection) saveDatabaseEntry() error {
-	err := userDb.SaveItem(conn.nickname, User{
+	err := userDb.SaveItem(conn.irc.Nick(), User{
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 	})
@@ -604,5 +507,5 @@ func (conn *Connection) saveDatabaseEntry() error {
 }
 
 func (conn *Connection) hasReplay() bool {
-	return conn.caps.HasCapability("whapp-irc/replay") || alternativeReplay
+	return conn.irc.Caps.Has("whapp-irc/replay") || alternativeReplay
 }

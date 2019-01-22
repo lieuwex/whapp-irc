@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"whapp-irc/ircConnection"
 	"whapp-irc/whapp"
 )
 
@@ -35,14 +36,14 @@ func (conn *Connection) alternativeReplayWhappMessageHandle(msg whapp.Message) e
 	sender := formatContact(*msg.Sender, false)
 	from := sender.SafeName()
 	if msg.IsSentByMe {
-		from = conn.nickname
+		from = conn.irc.Nick()
 	}
 
 	var to string
 	if chat.IsGroupChat || msg.IsSentByMe {
 		to = chat.Identifier()
 	} else {
-		to = conn.nickname
+		to = conn.irc.Nick()
 	}
 
 	if err := downloadAndStoreMedia(msg); err != nil {
@@ -60,8 +61,8 @@ func (conn *Connection) alternativeReplayWhappMessageHandle(msg whapp.Message) e
 			to,
 			line,
 		)
-		str := formatPrivateMessage("replay", conn.nickname, msg)
-		if err := conn.writeIRCNow(str); err != nil {
+		str := ircConnection.FormatPrivateMessage("replay", conn.irc.Nick(), msg)
+		if err := conn.irc.WriteNow(str); err != nil {
 			return err
 		}
 	}

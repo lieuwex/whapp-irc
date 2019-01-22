@@ -88,8 +88,7 @@ func (fs *FileServer) Start() error {
 }
 
 func (fs *FileServer) Stop() error {
-	err := fs.httpServer.Close()
-	if err != nil {
+	if err := fs.httpServer.Close(); err != nil {
 		return err
 	}
 

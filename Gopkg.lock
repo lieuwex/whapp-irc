@@ -131,6 +131,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:06dbb3dd9104b854479546944f509a15abbfa0664bd4acbb428a10f53f3acb9b"
+  name = "github.com/olebedev/emitter"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e8d1457e6aee6368f6abda5ad334fde63e9cc3fa"
+
+[[projects]]
+  branch = "master"
   digest = "1:7439e1e9a33b9d7d3eb7048fe50851a47186fd82d0fc6c481f749fb2c9901f61"
   name = "github.com/skip2/go-qrcode"
   packages = [
@@ -162,6 +170,14 @@
   revision = "183bebdce1b249c42a7cf6772817e8c2e873b966"
 
 [[projects]]
+  branch = "master"
+  digest = "1:76ee51c3f468493aff39dbacc401e8831fbb765104cbf613b89bef01cf4bad70"
+  name = "golang.org/x/net"
+  packages = ["context"]
+  pruneopts = "UT"
+  revision = "ed066c81e75eba56dd9bd2139ade88125b855585"
+
+[[projects]]
   digest = "1:1b9d6106326573c0212b29c1796f128271278474ed629055645ace928faaea67"
   name = "gopkg.in/h2non/filetype.v1"
   packages = [
@@ -184,6 +200,14 @@
   pruneopts = "UT"
   revision = "63eed78b082d43eae927969351464e98b6dc7eb9"
 
+[[projects]]
+  branch = "v2"
+  digest = "1:5bb148b78468350091db2ffbb2370f35cc6dcd74d9378a31b1c7b86ff7528f08"
+  name = "gopkg.in/tomb.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d5d1b5820637886def9eef33e03a27a9f166942c"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -193,10 +217,12 @@
     "github.com/chromedp/chromedp/runner",
     "github.com/h2non/filetype",
     "github.com/mozillazg/go-unidecode",
+    "github.com/olebedev/emitter",
     "github.com/skip2/go-qrcode",
     "golang.org/x/crypto/hkdf",
     "gopkg.in/sorcix/irc.v2",
     "gopkg.in/sorcix/irc.v2/ctcp",
+    "gopkg.in/tomb.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

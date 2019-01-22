@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -23,14 +22,6 @@ var (
 	startTime = time.Now()
 	commit    string
 )
-
-func handleSocket(socket *net.TCPConn) error {
-	conn, err := MakeConnection()
-	if err != nil {
-		return fmt.Errorf("error while making connection: %s", err)
-	}
-	return conn.BindSocket(socket)
-}
 
 func main() {
 	config, err := config.ReadEnvVars()
@@ -80,7 +71,7 @@ func main() {
 		}
 
 		go func() {
-			if err := handleSocket(socket); err != nil {
+			if err := BindSocket(socket); err != nil {
 				log.Println(err)
 			}
 		}()

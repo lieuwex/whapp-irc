@@ -5,55 +5,15 @@ import (
 	"log"
 	"strings"
 	"time"
+	"whapp-irc/ircConnection"
 
 	"gopkg.in/sorcix/irc.v2"
 	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
-func (conn *Connection) writeIRC(time time.Time, msg string) error {
-	if conn.caps.HasCapability("server-time") {
-		timeFormat := time.UTC().Format("2006-01-02T15:04:05.000Z")
-		msg = fmt.Sprintf("@time=%s %s", timeFormat, msg)
-	}
-
-	bytes := []byte(msg + "\n")
-
-	n, err := conn.socket.Write(bytes)
-	if err != nil {
-		return err
-	} else if n != len(bytes) {
-		return fmt.Errorf("bytes length mismatch")
-	}
-
-	return nil
-}
-
-func (conn *Connection) writeIRCNow(msg string) error {
-	return conn.writeIRC(time.Now(), msg)
-}
-
-func (conn *Connection) writeIRCListNow(messages []string) error {
-	for _, msg := range messages {
-		if err := conn.writeIRCNow(msg); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (conn *Connection) status(body string) error {
-	logMessage(time.Now(), "status", conn.nickname, body)
-	msg := formatPrivateMessage("status", conn.nickname, body)
-	return conn.writeIRCNow(msg)
-}
-
-func formatPrivateMessage(from, to, line string) string {
-	return fmt.Sprintf(":%s PRIVMSG %s :%s", from, to, line)
-}
-
 func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
-	write := conn.writeIRCNow
-	status := conn.status
+	write := conn.irc.WriteNow
+	status := conn.irc.Status
 
 	switch msg.Command {
 	case "PRIVMSG":
@@ -64,7 +24,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			body = fmt.Sprintf("_%s_", text)
 		}
 
-		logMessage(time.Now(), conn.nickname, to, body)
+		ircConnection.LogMessage(time.Now(), conn.irc.Nick(), to, body)
 
 		if to == "status" {
 			return nil
@@ -151,7 +111,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				return status(str)
 			}
 
-			return write(fmt.Sprintf(":%s MODE %s +o %s", conn.nickname, ident, nick))
+			return write(fmt.Sprintf(":%s MODE %s +o %s", conn.irc.Nick(), ident, nick))
 		}
 
 	case "LIST":
@@ -164,14 +124,14 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 			str := fmt.Sprintf(
 				":whapp-irc 322 %s %s %d :%s",
-				conn.nickname,
+				conn.irc.Nick(),
 				c.Identifier(),
 				nParticipants,
 				c.Name,
 			)
 			write(str)
 		}
-		write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.nickname))
+		write(fmt.Sprintf(":whapp-irc 323 %s :End of LIST", conn.irc.Nick()))
 
 	case "WHO":
 		identifier := msg.Params[0]
@@ -190,7 +150,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 				msg := fmt.Sprintf(
 					":whapp-irc 352 %s %s %s whapp-irc whapp-irc %s %s :0 %s",
-					conn.nickname,
+					conn.irc.Nick(),
 					identifier,
 					p.SafeName(),
 					p.SafeName(),
@@ -202,18 +162,18 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				}
 			}
 		}
-		write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.nickname, identifier))
+		write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.irc.Nick(), identifier))
 
 	case "WHOIS": // TODO: fix
 		chat := conn.GetChatByIdentifier(msg.Params[0])
 		if chat == nil || chat.IsGroupChat {
-			return write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.nickname, msg.Params[0]))
+			return write(fmt.Sprintf(":whapp-irc 401 %s %s :No such nick/channel", conn.irc.Nick(), msg.Params[0]))
 		}
 		identifier := chat.Identifier()
 
 		str := fmt.Sprintf(
 			":whapp-irc 311 %s %s ~%s whapp-irc * :%s",
-			conn.nickname,
+			conn.irc.Nick(),
 			identifier,
 			identifier,
 			chat.Name,
@@ -240,14 +200,14 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 			str := fmt.Sprintf(
 				":whapp-irc 319 %s %s :%s",
-				conn.nickname,
+				conn.irc.Nick(),
 				identifier,
 				strings.Join(names, " "),
 			)
 			write(str)
 		}
 
-		write(fmt.Sprintf(":whapp-irc 318 %s %s :End of /WHOIS list.", conn.nickname, identifier))
+		write(fmt.Sprintf(":whapp-irc 318 %s %s :End of /WHOIS list.", conn.irc.Nick(), identifier))
 
 	case "KICK":
 		chatIdentifier := msg.Params[0]
@@ -257,7 +217,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		if chat == nil || !chat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 403 %s %s :No such channel",
-				conn.nickname,
+				conn.irc.Nick(),
 				chatIdentifier,
 			)
 			return write(str)
@@ -289,7 +249,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		if chat == nil || !chat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 442 %s %s :You're not on that channel",
-				conn.nickname,
+				conn.irc.Nick(),
 				chatIdentifier,
 			)
 			return write(str)
@@ -298,7 +258,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		if personChat == nil || personChat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 401 %s %s :No such nick/channel",
-				conn.nickname,
+				conn.irc.Nick(),
 				nick,
 			)
 			return write(str)

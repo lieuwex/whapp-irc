@@ -5,6 +5,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"whapp-irc/ircConnection"
 	"whapp-irc/maps"
 	"whapp-irc/whapp"
 )
@@ -123,14 +124,14 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	if msg.IsSentByMeFromWeb {
 		return nil
 	} else if msg.IsSentByMe {
-		senderSafeName = conn.nickname
+		senderSafeName = conn.irc.Nick()
 	}
 
 	var to string
 	if chat.IsGroupChat || msg.IsSentByMe {
 		to = chat.Identifier()
 	} else {
-		to = conn.nickname
+		to = conn.irc.Nick()
 	}
 
 	if err := downloadAndStoreMedia(msg); err != nil {
@@ -151,8 +152,8 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 			)
 		}
 
-		str := formatPrivateMessage(senderSafeName, to, line)
-		if err := conn.writeIRC(msg.Time(), str); err != nil {
+		str := ircConnection.FormatPrivateMessage(senderSafeName, to, line)
+		if err := conn.irc.Write(msg.Time(), str); err != nil {
 			return err
 		}
 	}
@@ -160,8 +161,8 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	message := getMessageBody(msg, chat.Participants, conn.me)
 	for _, line := range strings.Split(message, "\n") {
 		logMessage(msg.Time(), senderSafeName, to, line)
-		str := formatPrivateMessage(senderSafeName, to, line)
-		if err := conn.writeIRC(msg.Time(), str); err != nil {
+		str := ircConnection.FormatPrivateMessage(senderSafeName, to, line)
+		if err := conn.irc.Write(msg.Time(), str); err != nil {
 			return err
 		}
 	}
@@ -196,7 +197,7 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 
 	var author string
 	if msg.From == conn.me.SelfID {
-		author = conn.nickname
+		author = conn.irc.Nick()
 	} else {
 		author = findName(msg.From)
 	}
@@ -205,7 +206,7 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 		recipientSelf := recipientID == conn.me.SelfID
 		var recipient string
 		if recipientSelf {
-			recipient = conn.nickname
+			recipient = conn.irc.Nick()
 		} else {
 			recipient = findName(recipientID)
 		}
@@ -222,25 +223,25 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 				break
 			}
 			str := fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier())
-			if err := conn.writeIRC(msg.Time(), str); err != nil {
+			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "leave":
 			str := fmt.Sprintf(":%s PART %s", recipient, chat.Identifier())
-			if err := conn.writeIRC(msg.Time(), str); err != nil {
+			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "remove":
 			str := fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient)
-			if err := conn.writeIRC(msg.Time(), str); err != nil {
+			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "miss":
-			str := formatPrivateMessage(author, chat.Identifier(), "-- missed call --")
-			if err := conn.writeIRC(msg.Time(), str); err != nil {
+			str := ircConnection.FormatPrivateMessage(author, chat.Identifier(), "-- missed call --")
+			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 

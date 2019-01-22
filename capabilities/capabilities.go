@@ -22,7 +22,7 @@ func MakeCapabilitiesMap() *CapabilitiesMap {
 	}
 }
 
-func (cm *CapabilitiesMap) AddCapability(cap string) {
+func (cm *CapabilitiesMap) Add(cap string) {
 	cm.m.Lock()
 	defer cm.m.Unlock()
 
@@ -30,7 +30,7 @@ func (cm *CapabilitiesMap) AddCapability(cap string) {
 	cm.caps = append(cm.caps, cap)
 }
 
-func (cm *CapabilitiesMap) HasCapability(cap string) bool {
+func (cm *CapabilitiesMap) Has(cap string) bool {
 	cm.m.RLock()
 	defer cm.m.RUnlock()
 
@@ -43,7 +43,7 @@ func (cm *CapabilitiesMap) HasCapability(cap string) bool {
 	return false
 }
 
-func (cm *CapabilitiesMap) Caps() []string {
+func (cm *CapabilitiesMap) List() []string {
 	cm.m.RLock()
 	defer cm.m.RUnlock()
 
