@@ -48,14 +48,14 @@ func (b *Bridge) Stop() (stopped bool) {
 		return false
 	}
 
-	b.cancel()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	b.cancel = cancel
 	if err := b.WI.Shutdown(ctx); err != nil {
 		// TODO: how do we handle this?
 		println("error while shutting down: " + err.Error())
 	}
+
+	b.cancel()
+	cancel()
 
 	b.started = false
 	return true
