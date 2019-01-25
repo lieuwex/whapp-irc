@@ -26,6 +26,15 @@ var (
 	commit    string
 )
 
+func makePool(loggingLevel whapp.LoggingLevel) (*chromedp.Pool, error) {
+	switch loggingLevel {
+	case whapp.LogLevelVerbose:
+		return chromedp.NewPool(chromedp.PoolLog(log.Printf, log.Printf, log.Printf))
+	default:
+		return chromedp.NewPool()
+	}
+}
+
 func main() {
 	config, err := config.ReadEnvVars()
 	if err != nil {
@@ -56,7 +65,7 @@ func main() {
 	}()
 	defer fs.Stop()
 
-	pool, err = chromedp.NewPool()
+	pool, err = makePool(loggingLevel)
 	if err != nil {
 		panic(err)
 	}
