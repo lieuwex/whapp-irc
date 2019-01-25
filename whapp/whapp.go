@@ -10,26 +10,43 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/client"
 	"github.com/chromedp/chromedp/runner"
 )
 
 // TODO: wrap unknown chromedp errors in an error type.
 
+type internalUnit interface {
+	Run(context.Context, chromedp.Action) error
+	Shutdown(context.Context, ...client.Option) error
+}
+
+type poolUnit struct {
+	res *chromedp.Res
+}
+
+func (u *poolUnit) Run(ctx context.Context, action chromedp.Action) error {
+	return u.res.Run(ctx, action)
+}
+func (u *poolUnit) Shutdown(ctx context.Context, opts ...client.Option) error {
+	cdp := u.res.CDP()
+	if err := cdp.Shutdown(ctx); err != nil {
+		return err
+	}
+	return u.res.Release()
+}
+
 // Instance is an instance to Whatsapp Web.
 type Instance struct {
 	LoginState LoginState
 
+	unit     internalUnit
 	cdp      *chromedp.CDP
 	injected bool
 }
 
-// MakeInstance makes a new Instance.
-func MakeInstance(
-	ctx context.Context,
-	headless bool,
-	loggingLevel LoggingLevel,
-) (*Instance, error) {
-	options := chromedp.WithRunnerOptions(
+func getOptions(headless bool) []runner.CommandLineOption {
+	return []runner.CommandLineOption{
 		runner.KillProcessGroup,
 		runner.ForceKill,
 
@@ -41,7 +58,16 @@ func MakeInstance(
 		runner.NoDefaultBrowserCheck,
 
 		runner.UserAgent(userAgent),
-	)
+	}
+}
+
+// MakeInstance makes a new Instance.
+func MakeInstance(
+	ctx context.Context,
+	headless bool,
+	loggingLevel LoggingLevel,
+) (*Instance, error) {
+	options := chromedp.WithRunnerOptions(getOptions(headless)...)
 
 	cdp, err := func() (*chromedp.CDP, error) {
 		switch loggingLevel {
@@ -58,7 +84,31 @@ func MakeInstance(
 	return &Instance{
 		LoginState: Loggedout,
 
+		unit:     cdp,
 		cdp:      cdp,
+		injected: false,
+	}, nil
+}
+
+// MakeInstanceWithPool makes a new Instance using the given pool.
+func MakeInstanceWithPool(
+	ctx context.Context,
+	pool *chromedp.Pool,
+	headless bool,
+	loggingLevel LoggingLevel,
+) (*Instance, error) {
+	options := getOptions(headless)
+
+	res, err := pool.Allocate(ctx, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Instance{
+		LoginState: Loggedout,
+
+		unit:     &poolUnit{res},
+		cdp:      res.CDP(),
 		injected: false,
 	}, nil
 }
@@ -388,8 +438,5 @@ func (wi *Instance) ListenForPhoneActiveChange(ctx context.Context, interval tim
 
 // Shutdown shuts down the current Instance.
 func (wi *Instance) Shutdown(ctx context.Context) error {
-	if err := wi.cdp.Shutdown(ctx); err != nil {
-		return err
-	}
-	return wi.cdp.Wait()
+	return wi.unit.Shutdown(ctx)
 }

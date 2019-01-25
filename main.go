@@ -9,11 +9,14 @@ import (
 	"whapp-irc/files"
 	"whapp-irc/maps"
 	"whapp-irc/whapp"
+
+	"github.com/chromedp/chromedp"
 )
 
 var (
 	fs     *files.FileServer
 	userDb *database.Database
+	pool   *chromedp.Pool
 
 	loggingLevel      whapp.LoggingLevel
 	mapProvider       maps.Provider
@@ -52,6 +55,12 @@ func main() {
 		}
 	}()
 	defer fs.Stop()
+
+	pool, err = chromedp.NewPool()
+	if err != nil {
+		panic(err)
+	}
+	defer pool.Shutdown()
 
 	addr, err := net.ResolveTCPAddr("tcp", ":"+config.IRCPort)
 	if err != nil {

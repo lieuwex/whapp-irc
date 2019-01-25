@@ -31,7 +31,7 @@ func (b *Bridge) Start() (started bool, err error) {
 
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 
-	wi, err := whapp.MakeInstance(b.ctx, true, loggingLevel)
+	wi, err := whapp.MakeInstanceWithPool(b.ctx, pool, true, loggingLevel)
 	if err != nil {
 		return false, err
 	}
