@@ -138,7 +138,14 @@ func BindSocket(socket *net.TCPConn) error {
 	// if negotiation hasn't started yet, we just skip through (we figure the
 	// client doesn't support IRCv3, since normally negotiation occurs fairly
 	// early in the connection)
-	conn.irc.Caps.WaitNegotiation()
+	started, ok := conn.irc.Caps.WaitNegotiation(ctx)
+	if !ok {
+		return nil
+	} else if !started {
+		str := "IRCv3 capabilities negotiation has not started, " +
+			"this is probably a non IRCv3 compatible client."
+		log.Printf(str)
+	}
 
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0

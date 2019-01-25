@@ -1,12 +1,13 @@
 package capabilities
 
 import (
+	"context"
 	"strings"
 	"sync"
 )
 
 type CapabilitiesMap struct {
-	finishedCh chan bool
+	finishedCh chan interface{}
 
 	m sync.RWMutex
 
@@ -18,7 +19,7 @@ type CapabilitiesMap struct {
 
 func MakeCapabilitiesMap() *CapabilitiesMap {
 	return &CapabilitiesMap{
-		finishedCh: make(chan bool),
+		finishedCh: make(chan interface{}),
 	}
 }
 
@@ -84,8 +85,15 @@ func (cm *CapabilitiesMap) StartedNegotiation() bool {
 	return cm.started
 }
 
-func (cm *CapabilitiesMap) WaitNegotiation() {
+func (cm *CapabilitiesMap) WaitNegotiation(ctx context.Context) (started, ok bool) {
 	if cm.StartedNegotiation() {
-		<-cm.finishedCh
+		select {
+		case <-ctx.Done():
+			return true, false
+		case <-cm.finishedCh:
+			return true, true
+		}
 	}
+
+	return false, true
 }
