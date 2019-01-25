@@ -91,10 +91,11 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 
 	chat := conn.GetChatByID(msg.Chat.ID)
 	if chat == nil {
-		chat, err = conn.addChat(msg.Chat)
+		chat, err = conn.convertChat(msg.Chat)
 		if err != nil {
 			return err
 		}
+		conn.addChat(chat)
 	}
 
 	if chat.IsGroupChat && !chat.Joined {

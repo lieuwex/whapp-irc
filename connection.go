@@ -9,6 +9,7 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"whapp-irc/ircConnection"
 	"whapp-irc/whapp"
@@ -371,12 +372,7 @@ func (conn *Connection) convertChat(chat whapp.Chat) (*Chat, error) {
 	}, nil
 }
 
-func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
-	chat, err := conn.convertChat(rawChat)
-	if err != nil {
-		return nil, err
-	}
-
+func (conn *Connection) addChat(chat *Chat) {
 	if chat.IsGroupChat {
 		log.Printf("%-30s %3d participants\n", chat.Identifier(), len(chat.Participants))
 	} else {
@@ -386,11 +382,10 @@ func (conn *Connection) addChat(rawChat whapp.Chat) (*Chat, error) {
 	for i, c := range conn.Chats {
 		if c.ID == chat.ID {
 			conn.Chats[i] = chat
-			return chat, nil
+			return
 		}
 	}
 	conn.Chats = append(conn.Chats, chat)
-	return chat, nil
 }
 
 // TODO: check if already set-up
@@ -406,6 +401,8 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		cancel()
 	}()
 
+	// if we have the current user in the database, try to relogin using the
+	// previous localStorage state
 	var user User
 	found, err := userDb.GetItem(conn.irc.Nick(), &user)
 	if err != nil {
@@ -425,11 +422,13 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		}
 	}
 
+	// (re)open site
 	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
 	if err != nil {
 		return err
 	}
 
+	// if we aren't logged in yet we have to get the QR code and stuff
 	if state == whapp.Loggedout {
 		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
 		if err != nil {
@@ -456,11 +455,14 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		}
 	}
 
+	// waiting for login
 	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
 		return err
 	}
 	conn.irc.Status("logged in")
 
+	// get localstorage (that contains new login information), and save it to
+	// the database
 	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(conn.bridge.ctx)
 	if err != nil {
 		log.Printf("error while getting local storage: %s\n", err.Error())
@@ -470,22 +472,48 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		}
 	}
 
+	// get information about the user
 	conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
 	if err != nil {
 		return err
 	}
 
-	chats, err := conn.bridge.WI.GetAllChats(conn.bridge.ctx)
+	// get raw chats
+	rawChats, err := conn.bridge.WI.GetAllChats(conn.bridge.ctx)
 	if err != nil {
 		return err
 	}
+
+	// convert chats to internal reprenstation, we do this using a second slice
+	// and a WaitGroup to preserve the initial order
+	chats := make([]*Chat, len(rawChats))
+	var wg sync.WaitGroup
+	for i, raw := range rawChats {
+		wg.Add(1)
+		go func(i int, raw whapp.Chat) {
+			defer wg.Done()
+
+			chat, err := conn.convertChat(raw)
+			if err != nil {
+				str := fmt.Sprintf("error while converting chat with ID %s, skipping", raw.ID)
+				conn.irc.Status(str)
+				log.Printf("%s. error: %s", str, err)
+				return
+			}
+
+			chats[i] = chat
+		}(i, raw)
+	}
+	wg.Wait()
+
+	// add all chats to connection
 	for _, chat := range chats {
-		if _, err := conn.addChat(chat); err != nil {
-			str := fmt.Sprintf("error while converting chat with ID %s, skipping", chat.ID)
-			conn.irc.Status(str)
-			log.Printf(str + " error: " + err.Error())
+		if chat == nil {
+			// there was an error converting this chat, skip it.
 			continue
 		}
+
+		conn.addChat(chat)
 	}
 
 	return nil
