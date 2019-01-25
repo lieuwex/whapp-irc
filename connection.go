@@ -93,14 +93,14 @@ func BindSocket(socket *net.TCPConn) error {
 	select {
 	case <-ctx.Done():
 		cancel()
-		return ctx.Err()
+		return nil
 	case <-conn.irc.NickSetChannel():
 	}
 
 	if _, err := welcome(); err != nil {
 		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
 		cancel()
-		return ctx.Err()
+		return nil
 	}
 
 	// now that we have set-up the bridge...
