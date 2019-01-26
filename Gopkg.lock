@@ -214,6 +214,7 @@
   input-imports = [
     "github.com/chromedp/cdproto/runtime",
     "github.com/chromedp/chromedp",
+    "github.com/chromedp/chromedp/client",
     "github.com/chromedp/chromedp/runner",
     "github.com/h2non/filetype",
     "github.com/mozillazg/go-unidecode",

@@ -113,7 +113,15 @@ func MakeInstanceWithPool(
 	}, nil
 }
 
-// Open opens a tab with Whatsapp Web and returns the current login state.
+// Navigate opens a tab with WhatsApp Web, without checking the login state.
+func (wi *Instance) Navigate(ctx context.Context) error {
+	return wi.cdp.Run(ctx, chromedp.Tasks{
+		chromedp.Navigate(url),
+		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
+	})
+}
+
+// Open opens a tab with WhatsApp Web and returns the current login state.
 func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	var state LoginState
 	var loggedIn bool
@@ -121,6 +129,7 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 	if err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
+		chromedp.Sleep(2 * time.Second), // HACK
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
 	}); err != nil {
 		return state, err
@@ -181,11 +190,10 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 	var code string
 	var ok bool
 
-	err := wi.cdp.Run(ctx, chromedp.Tasks{
+	if err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.WaitVisible("[alt='Scan me!']"), // wait for QR
 		chromedp.AttributeValue("._2EZ_m", "data-ref", &code, &ok),
-	})
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 

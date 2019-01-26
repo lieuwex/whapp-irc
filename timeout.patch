@@ -1,0 +1,35 @@
+diff --git a/vendor/github.com/chromedp/chromedp/chromedp.go b/vendor/github.com/chromedp/chromedp/chromedp.go
+index faddc8b..701277a 100644
+--- a/vendor/github.com/chromedp/chromedp/chromedp.go
++++ b/vendor/github.com/chromedp/chromedp/chromedp.go
+@@ -23,7 +23,7 @@ import (
+ const (
+ 	// DefaultNewTargetTimeout is the default time to wait for a new target to
+ 	// be started.
+-	DefaultNewTargetTimeout = 3 * time.Second
++	DefaultNewTargetTimeout = 6 * time.Second
+ 
+ 	// DefaultCheckDuration is the default time to sleep between a check.
+ 	DefaultCheckDuration = 50 * time.Millisecond
+diff --git a/vendor/github.com/chromedp/chromedp/handler.go b/vendor/github.com/chromedp/chromedp/handler.go
+index 8107e3e..bad5878 100644
+--- a/vendor/github.com/chromedp/chromedp/handler.go
++++ b/vendor/github.com/chromedp/chromedp/handler.go
+@@ -440,7 +440,7 @@ func (h *TargetHandler) SetActive(ctxt context.Context, id cdp.FrameID) error {
+ // WaitFrame waits for a frame to be loaded using the provided context.
+ func (h *TargetHandler) WaitFrame(ctxt context.Context, id cdp.FrameID) (*cdp.Frame, error) {
+ 	// TODO: fix this
+-	timeout := time.After(10 * time.Second)
++	timeout := time.After(15 * time.Second)
+ 
+ 	for {
+ 		select {
+@@ -474,7 +474,7 @@ func (h *TargetHandler) WaitFrame(ctxt context.Context, id cdp.FrameID) (*cdp.Fr
+ // WaitNode waits for a node to be loaded using the provided context.
+ func (h *TargetHandler) WaitNode(ctxt context.Context, f *cdp.Frame, id cdp.NodeID) (*cdp.Node, error) {
+ 	// TODO: fix this
+-	timeout := time.After(10 * time.Second)
++	timeout := time.After(15 * time.Second)
+ 
+ 	for {
+ 		select {

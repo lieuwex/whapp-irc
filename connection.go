@@ -410,10 +410,11 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 	} else if found {
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
 
-		if _, err := conn.bridge.WI.Open(conn.bridge.ctx); err != nil {
+		conn.irc.Status("logging in using stored session")
+
+		if err := conn.bridge.WI.Navigate(conn.bridge.ctx); err != nil {
 			return err
 		}
-
 		if err := conn.bridge.WI.SetLocalStorage(
 			conn.bridge.ctx,
 			user.LocalStorage,
@@ -422,7 +423,7 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		}
 	}
 
-	// (re)open site
+	// open site
 	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
 	if err != nil {
 		return err

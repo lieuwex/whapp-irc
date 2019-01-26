@@ -9,6 +9,10 @@ COPY Gopkg.lock Gopkg.toml /go/src/whapp-irc/
 WORKDIR /go/src/whapp-irc/
 RUN dep ensure -vendor-only
 
+# Apply chromedp patch
+COPY timeout.patch .
+RUN cat timeout.patch | patch -p1
+
 # Build whapp-irc
 COPY . .
 RUN go build -ldflags "-X main.commit=$(git rev-list -1 HEAD)" -o /bin/whapp-irc
