@@ -63,6 +63,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 		return {
 			id: participant.id,
 			isAdmin: participant.isAdmin,
+			isSuperAdmin: participant.isSuperAdmin,
 			contact: whappGo.contactToJSON(participant.contact),
 		};
 	}

@@ -73,6 +73,7 @@ func BindSocket(socket *net.TCPConn) error {
 			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.irc.Nick(), startTime),
 			fmt.Sprintf(":whapp-irc 004 %s :", conn.irc.Nick()),
+			fmt.Sprintf(":whapp-irc 005 %s PREFIX=(oh)@%% CHARSET=UTF-8 :are supported by this server", conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", conn.irc.Nick(), commit),
 			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.irc.Nick()),
@@ -299,15 +300,19 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	names := make([]string, 0)
 	for _, participant := range chat.Participants {
 		if participant.Contact.IsMe {
-			if participant.IsAdmin {
+			if participant.IsSuperAdmin {
 				conn.irc.WriteNow(fmt.Sprintf(":whapp-irc MODE %s +o %s", identifier, conn.irc.Nick()))
+			} else if participant.IsAdmin {
+				conn.irc.WriteNow(fmt.Sprintf(":whapp-irc MODE %s +h %s", identifier, conn.irc.Nick()))
 			}
 			continue
 		}
 
 		prefix := ""
-		if participant.IsAdmin {
+		if participant.IsSuperAdmin {
 			prefix = "@"
+		} else if participant.IsAdmin {
+			prefix = "%"
 		}
 
 		names = append(names, prefix+participant.SafeName())

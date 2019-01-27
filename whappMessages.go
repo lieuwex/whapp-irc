@@ -10,10 +10,9 @@ import (
 	"whapp-irc/whapp"
 )
 
-func formatContact(contact whapp.Contact, isAdmin bool) Participant {
+func formatContact(contact whapp.Contact) Participant {
 	return Participant{
 		ID:      contact.ID,
-		IsAdmin: isAdmin,
 		Contact: contact,
 	}
 }
@@ -119,7 +118,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 		return conn.handleWhappNotification(chat, msg)
 	}
 
-	sender := formatContact(*msg.Sender, false)
+	sender := formatContact(*msg.Sender)
 	senderSafeName := sender.SafeName()
 
 	if msg.IsSentByMeFromWeb {

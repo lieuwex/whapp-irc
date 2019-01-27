@@ -34,7 +34,7 @@ func (conn *Connection) alternativeReplayWhappMessageHandle(msg whapp.Message) e
 		return nil
 	}
 
-	sender := formatContact(*msg.Sender, false)
+	sender := formatContact(*msg.Sender)
 	from := sender.SafeName()
 	if msg.IsSentByMe {
 		from = conn.irc.Nick()
