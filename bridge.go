@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"time"
 	"whapp-irc/whapp"
 )
@@ -29,15 +30,18 @@ func (b *Bridge) Start() (started bool, err error) {
 		return false, nil
 	}
 
-	b.ctx, b.cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 
-	wi, err := whapp.MakeInstanceWithPool(b.ctx, pool, true, loggingLevel)
+	wi, err := whapp.MakeInstanceWithPool(ctx, pool, true, loggingLevel)
 	if err != nil {
+		cancel()
 		return false, err
 	}
 
 	b.started = true
 	b.WI = wi
+	b.ctx = ctx
+	b.cancel = cancel
 
 	return true, nil
 }
@@ -51,12 +55,16 @@ func (b *Bridge) Stop() (stopped bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	if err := b.WI.Shutdown(ctx); err != nil {
 		// TODO: how do we handle this?
-		println("error while shutting down: " + err.Error())
+		log.Printf("error while shutting down: %s", err.Error())
 	}
 
 	b.cancel()
 	cancel()
 
 	b.started = false
+	b.WI = nil
+	b.ctx = nil
+	b.cancel = nil
+
 	return true
 }

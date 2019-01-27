@@ -258,28 +258,27 @@ func (wi *Instance) ListenLoggedIn(ctx context.Context, interval time.Duration) 
 		defer close(resCh)
 
 		prev := false
-		isFirst := true
+		first := true
 
 		for {
-			if err := ctx.Err(); err != nil {
-				errCh <- err
+			select {
+			case <-ctx.Done():
 				return
+
+			case <-time.After(interval):
+				res, err := wi.getLoggedIn(ctx)
+				if err != nil {
+					errCh <- err
+					return
+				}
+
+				if res != prev && !first {
+					resCh <- res
+				}
+
+				prev = res
+				first = false
 			}
-
-			res, err := wi.getLoggedIn(ctx)
-			if err != nil {
-				errCh <- err
-				return
-			}
-
-			if res != prev && !isFirst {
-				resCh <- res
-			}
-
-			prev = res
-			isFirst = false
-
-			time.Sleep(interval)
 		}
 	}()
 
@@ -323,22 +322,21 @@ func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duratio
 		defer close(messageCh)
 
 		for {
-			if err := ctx.Err(); err != nil {
-				errCh <- err
+			select {
+			case <-ctx.Done():
 				return
-			}
 
-			res, err := wi.getNewMessages(ctx)
-			if err != nil {
-				errCh <- err
-				return
-			}
+			case <-time.After(interval):
+				res, err := wi.getNewMessages(ctx)
+				if err != nil {
+					errCh <- err
+					return
+				}
 
-			for _, msg := range res {
-				messageCh <- msg
+				for _, msg := range res {
+					messageCh <- msg
+				}
 			}
-
-			time.Sleep(interval)
 		}
 	}()
 
@@ -417,27 +415,26 @@ func (wi *Instance) ListenForPhoneActiveChange(ctx context.Context, interval tim
 		defer close(resCh)
 
 		prev := false
-		new := true
+		first := true
 
 		for {
-			if err := ctx.Err(); err != nil {
-				errCh <- err
+			select {
+			case <-ctx.Done():
 				return
-			}
 
-			res, err := wi.GetPhoneActive(ctx)
-			if err != nil {
-				errCh <- err
-				return
-			}
+			case <-time.After(interval):
+				res, err := wi.GetPhoneActive(ctx)
+				if err != nil {
+					errCh <- err
+					return
+				}
 
-			if new || res != prev {
-				prev = res
-				new = false
-				resCh <- res
+				if first || res != prev {
+					prev = res
+					first = false
+					resCh <- res
+				}
 			}
-
-			time.Sleep(interval)
 		}
 	}()
 
