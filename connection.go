@@ -212,7 +212,7 @@ func BindSocket(socket *net.TCPConn) error {
 					continue
 				}
 
-				log.Println("logged out of whatsapp!")
+				conn.irc.Status("logged out of whatsapp")
 
 				return
 			}
