@@ -7,7 +7,6 @@ import (
 	"log"
 	"math"
 	"net"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -21,49 +20,55 @@ import (
 // time, and during connection setup.
 const ircMessageQueueSize = 10
 
-var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
-
 // A Connection represents an IRC connection.
 type Connection struct {
-	me whapp.Me
-
 	bridge *Bridge
-	irc    *ircConnection.IRCConnection
+	chats  map[whapp.ID]*Chat
 
-	localStorage map[string]string
+	irc *ircConnection.IRCConnection
 
 	timestampMap *TimestampMap
 
-	chats map[whapp.ID]*Chat
+	me           whapp.Me
+	localStorage map[string]string
 }
 
 // BindSocket binds the given TCP connection.
 func BindSocket(socket *net.TCPConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	conn := &Connection{
 		bridge: MakeBridge(),
-		irc:    ircConnection.HandleConnection(ctx, socket),
+		chats:  make(map[whapp.ID]*Chat),
+
+		irc: ircConnection.HandleConnection(ctx, socket),
 
 		timestampMap: MakeTimestampMap(),
-
-		chats: make(map[whapp.ID]*Chat),
 	}
 
 	go func() {
 		select {
-		// when irc connection dies, cancel context
 		case <-conn.irc.StopChannel():
-			cancel()
 		case <-ctx.Done():
 		}
 
-		// when the context is cancelled, kill everything off
+		// when the irc connection dies or the context is cancelled, kill
+		// everything off
+		cancel()
 		conn.irc.Close()
 		conn.bridge.Stop()
 	}()
 
-	// welcome will send the welcome message to the user and setup the bridge.
-	welcome := func() error {
+	// wait for the client to send a nickname
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-conn.irc.NickSetChannel():
+	}
+
+	// send the welcome message to the user and setup the bridge.
+	if err := func() error {
 		if err := conn.irc.WriteListNow([]string{
 			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.irc.Nick(), conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.irc.Nick()),
@@ -83,20 +88,9 @@ func BindSocket(socket *net.TCPConn) error {
 		}
 
 		return nil
-	}
-
-	// wait for the client to send a nickname
-	select {
-	case <-ctx.Done():
-		cancel()
-		return nil
-	case <-conn.irc.NickSetChannel():
-	}
-
-	if err := welcome(); err != nil {
+	}(); err != nil {
 		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
-		cancel()
-		return nil
+		return err
 	}
 
 	// now that we have set-up the bridge...
@@ -509,7 +503,7 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 }
 
 func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Presence, found bool, err error) {
-	if c, has := conn.chats[userID]; has {
+	if c := conn.GetChatByID(userID); c != nil {
 		presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)
 		return presence, true, err
 	}
