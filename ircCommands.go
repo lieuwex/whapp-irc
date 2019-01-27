@@ -116,7 +116,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 	case "LIST":
 		// TODO: support args
-		for _, c := range conn.Chats {
+		for _, c := range conn.chats {
 			nParticipants := len(c.Participants)
 			if !c.IsGroupChat {
 				nParticipants = 2

@@ -25,8 +25,6 @@ var replyRegex = regexp.MustCompile(`^!(\d+)\s+(.+)$`)
 
 // A Connection represents an IRC connection.
 type Connection struct {
-	Chats []*Chat
-
 	me whapp.Me
 
 	bridge *Bridge
@@ -37,6 +35,8 @@ type Connection struct {
 	localStorage map[string]string
 
 	timestampMap *TimestampMap
+
+	chats map[whapp.ID]*Chat
 }
 
 // BindSocket binds the given TCP connection.
@@ -47,6 +47,8 @@ func BindSocket(socket *net.TCPConn) error {
 		irc:    ircConnection.HandleConnection(ctx, socket),
 
 		timestampMap: MakeTimestampMap(),
+
+		chats: make(map[whapp.ID]*Chat),
 	}
 
 	go func() {
@@ -151,7 +153,7 @@ func BindSocket(socket *net.TCPConn) error {
 
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0
-	for _, c := range conn.Chats {
+	for _, c := range conn.chats {
 		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
 
 		if empty || !conn.hasReplay() {
@@ -332,19 +334,14 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 // GetChatByID returns the chat with the given ID, if any.
 func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
-	for _, c := range conn.Chats {
-		if c.ID == ID {
-			return c
-		}
-	}
-	return nil
+	return conn.chats[ID]
 }
 
 // GetChatByIdentifier returns the chat with the given identifier, if any.
 func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
 	identifier = strings.ToLower(identifier)
 
-	for _, c := range conn.Chats {
+	for _, c := range conn.chats {
 		if strings.ToLower(c.Identifier()) == identifier {
 			return c
 		}
@@ -384,13 +381,7 @@ func (conn *Connection) addChat(chat *Chat) {
 		log.Println(chat.Identifier())
 	}
 
-	for i, c := range conn.Chats {
-		if c.ID == chat.ID {
-			conn.Chats[i] = chat
-			return
-		}
-	}
-	conn.Chats = append(conn.Chats, chat)
+	conn.chats[chat.ID] = chat
 }
 
 // TODO: check if already set-up
@@ -526,11 +517,9 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 }
 
 func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Presence, found bool, err error) {
-	for _, c := range conn.Chats {
-		if c.ID == userID {
-			presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)
-			return presence, true, err
-		}
+	if c, has := conn.chats[userID]; has {
+		presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)
+		return presence, true, err
 	}
 
 	return whapp.Presence{}, false, nil
