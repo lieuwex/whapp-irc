@@ -30,8 +30,6 @@ type Connection struct {
 	bridge *Bridge
 	irc    *ircConnection.IRCConnection
 
-	welcomed bool
-
 	localStorage map[string]string
 
 	timestampMap *TimestampMap
@@ -65,11 +63,7 @@ func BindSocket(socket *net.TCPConn) error {
 	}()
 
 	// welcome will send the welcome message to the user and setup the bridge.
-	welcome := func() (setup bool, err error) {
-		if conn.welcomed || conn.irc.Nick() == "" {
-			return false, nil
-		}
-
+	welcome := func() error {
 		if err := conn.irc.WriteListNow([]string{
 			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.irc.Nick(), conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.irc.Nick()),
@@ -80,17 +74,15 @@ func BindSocket(socket *net.TCPConn) error {
 			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.irc.Nick()),
 			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.irc.Nick()),
 		}); err != nil {
-			return false, err
+			return err
 		}
-
-		conn.welcomed = true
 
 		if err := conn.setup(cancel); err != nil {
 			log.Printf("err while setting up: %s\n", err.Error())
-			return false, err
+			return err
 		}
 
-		return true, nil
+		return nil
 	}
 
 	// wait for the client to send a nickname
@@ -101,7 +93,7 @@ func BindSocket(socket *net.TCPConn) error {
 	case <-conn.irc.NickSetChannel():
 	}
 
-	if _, err := welcome(); err != nil {
+	if err := welcome(); err != nil {
 		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
 		cancel()
 		return nil
