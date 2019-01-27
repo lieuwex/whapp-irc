@@ -129,9 +129,10 @@ func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, err
 
 // Participant represents a participants in a group chat.
 type Participant struct {
-	ID      ID      `json:"id"`
-	IsAdmin bool    `json:"isAdmin"`
-	Contact Contact `json:"contact"`
+	ID           ID      `json:"id"`
+	IsAdmin      bool    `json:"isAdmin"`
+	IsSuperAdmin bool    `json:"isSuperAdmin"`
+	Contact      Contact `json:"contact"`
 }
 
 // MessageID contains various IDs for a message.
@@ -330,23 +331,34 @@ func (d Description) Time() time.Time {
 	return time.Unix(d.Timestamp, 0)
 }
 
+// MuteInfo contains information about the mute state of a chat.
+type MuteInfo struct {
+	IsMuted             bool  `json:"isMuted"`
+	ExpirationTimestamp int64 `json:"expiration"`
+}
+
+// Expiration returns the time when the mute is removed.
+func (i MuteInfo) Expiration() time.Time {
+	return time.Unix(i.ExpirationTimestamp, 0)
+}
+
 // Chat represents a chat in WhatsApp.
 type Chat struct {
 	ID                    ID        `json:"id"`
-	PendingMsgs           bool      `json:"pendingMsgs"`
+	HasPendingMessages    bool      `json:"pendingMsgs"`
 	LastReceivedMessageID MessageID `json:"lastReceivedKey"`
 	Timestamp             int64     `json:"t"`
 	UnreadCount           int       `json:"unreadCount"`
-	Archive               bool      `json:"archive"`
+	Archived              bool      `json:"archive"`
 	IsReadOnly            bool      `json:"isReadOnly"`
-	ModifyTag             int       `json:"modifyTag"`
-	MuteExpiration        int       `json:"muteExpiration"`
+	MuteInfo              MuteInfo  `json:"muteInfo"`
 
 	Name        string       `json:"name"`
 	Description *Description `json:"description"`
 
+	PinTimestamp int64 `json:"pin"`
+
 	NotSpam  bool     `json:"notSpam"`
-	Pin      int      `json:"pin"`
 	Kind     string   `json:"kind"`
 	Contact  Contact  `json:"contact"`
 	Presence Presence `json:"presence"`
@@ -362,6 +374,15 @@ func (c Chat) Title() string {
 		res = c.Contact.GetName()
 	}
 	return res
+}
+
+// PinTime returns the timestamp when the current chat was pinned, and whether
+// or not it is currently pinned.
+func (c Chat) PinTime() (pinTime time.Time, set bool) {
+	if t := c.PinTimestamp; t != 0 {
+		return time.Unix(t, 0), true
+	}
+	return time.Time{}, false
 }
 
 // Participants retrieves and returns a slice containing all participants of the

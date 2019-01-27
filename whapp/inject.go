@@ -123,15 +123,29 @@ func (wi *Instance) inject(ctx context.Context) error {
 			};
 		}
 
-		return Object.assign(chat.toJSON(), {
+		return {
+			id: chat.id,
+			pendingMsgs: chat.pendingMsgs,
+			lastReceivedKey: chat.lastReceivedKey,
+			t: chat.t,
+			unreadCount: chat.unreadCount,
+			archive: chat.archive,
+			isReadOnly: chat.isReadOnly,
+			muteInfo: {
+				isMuted: chat.mute.isMuted,
+				expiration: chat.mute.expiration,
+			},
+			name: chat.name,
+			notSpam: chat.notSpam,
+			pin: chat.pin,
+
 			kind: chat.kind,
 			isGroup: chat.isGroup,
 			contact: whappGo.contactToJSON(chat.contact),
 			groupMetadata: metadata,
 			description: description,
 			presence: chat.presence && whappGo.presenceToJSON(chat.presence),
-			msgs: null,
-		});
+		};
 	};
 
 	whappGo.presenceToJSON = function (presence) {
