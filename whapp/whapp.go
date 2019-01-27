@@ -128,8 +128,8 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 
 	if err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(url),
-		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Sleep(2 * time.Second), // HACK
+		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
 	}); err != nil {
 		return state, err
