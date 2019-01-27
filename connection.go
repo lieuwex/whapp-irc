@@ -23,7 +23,7 @@ const ircMessageQueueSize = 10
 // A Connection represents an IRC connection.
 type Connection struct {
 	bridge *Bridge
-	chats  map[whapp.ID]*Chat
+	chats  []*Chat
 
 	irc *ircConnection.IRCConnection
 
@@ -40,7 +40,6 @@ func BindSocket(socket *net.TCPConn) error {
 
 	conn := &Connection{
 		bridge: MakeBridge(),
-		chats:  make(map[whapp.ID]*Chat),
 
 		irc: ircConnection.HandleConnection(ctx, socket),
 
@@ -320,7 +319,12 @@ func (conn *Connection) joinChat(chat *Chat) error {
 
 // GetChatByID returns the chat with the given ID, if any.
 func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
-	return conn.chats[ID]
+	for _, c := range conn.chats {
+		if c.ID == ID {
+			return c
+		}
+	}
+	return nil
 }
 
 // GetChatByIdentifier returns the chat with the given identifier, if any.
@@ -367,7 +371,13 @@ func (conn *Connection) addChat(chat *Chat) {
 		log.Println(chat.Identifier())
 	}
 
-	conn.chats[chat.ID] = chat
+	for i, c := range conn.chats {
+		if c.ID == chat.ID {
+			conn.chats[i] = chat
+			return
+		}
+	}
+	conn.chats = append(conn.chats, chat)
 }
 
 // TODO: check if already set-up
