@@ -44,3 +44,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/olebedev/emitter"
+
+[[constraint]]
+  name = "github.com/wangii/emoji"
+  branch = "master"

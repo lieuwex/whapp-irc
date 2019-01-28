@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"log"
 	"mime"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/h2non/filetype"
 	"github.com/mozillazg/go-unidecode"
+	"github.com/wangii/emoji"
 )
 
 func strTimestamp() string {
@@ -51,9 +53,18 @@ func getExtensionByMimeOrBytes(mime string, bytes []byte) string {
 
 var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
 
+// ircSafeString converts emojis into their corresponding tag, converts Unicode
+// into their matching ASCII representation and removes and left non safe
+// characters in the given str.
 func ircSafeString(str string) string {
-	str = unidecode.Unidecode(str)
-	return unsafeRegex.ReplaceAllLiteralString(str, "")
+	emojiTagged := emoji.UnicodeToEmojiTag(str)
+	decoded := unidecode.Unidecode(emojiTagged)
+	ircSafe := unsafeRegex.ReplaceAllLiteralString(decoded, "")
+
+	if ircSafe == "" {
+		return "x" + hex.EncodeToString([]byte(str))
+	}
+	return ircSafe
 }
 
 func plural(count int, singular, plural string) string {

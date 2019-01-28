@@ -151,6 +151,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:350070e36cb0725fb4fc8128c33f7a7ddba2be65e4d63bfb3daea8a2cdd01522"
+  name = "github.com/wangii/emoji"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d15b69a4831e56a3fcf1fc990f5cbc247641b783"
+
+[[projects]]
+  branch = "master"
   digest = "1:8e4024a39f73657fda08fc46908003698955a5f1fdeba7ceb6801070720de922"
   name = "golang.org/x/crypto"
   packages = ["hkdf"]
@@ -220,6 +228,7 @@
     "github.com/mozillazg/go-unidecode",
     "github.com/olebedev/emitter",
     "github.com/skip2/go-qrcode",
+    "github.com/wangii/emoji",
     "golang.org/x/crypto/hkdf",
     "gopkg.in/sorcix/irc.v2",
     "gopkg.in/sorcix/irc.v2/ctcp",
