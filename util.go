@@ -51,7 +51,7 @@ func getExtensionByMimeOrBytes(mime string, bytes []byte) string {
 	return getExtension(bytes)
 }
 
-var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+]`)
+var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+:]`)
 
 // ircSafeString converts emojis into their corresponding tag, converts Unicode
 // into their matching ASCII representation and removes and left non safe
