@@ -143,8 +143,10 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				}
 
 				presenceStamp := "H"
-				presence, found, err := conn.getPresenceByUserID(p.ID)
-				if found && err == nil && !presence.IsOnline {
+				if presence, err := item.chat.rawChat.GetPresence(
+					conn.bridge.ctx,
+					conn.bridge.WI,
+				); err == nil && !presence.IsOnline {
 					presenceStamp = "G"
 				}
 
