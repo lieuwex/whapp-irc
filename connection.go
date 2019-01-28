@@ -20,10 +20,16 @@ import (
 // time, and during connection setup.
 const ircMessageQueueSize = 10
 
+type ChatListItem struct {
+	Identifier string   `json:"identifier"`
+	ID         whapp.ID `json:"id"`
+
+	chat *Chat
+}
+
 // A Connection represents an IRC connection.
 type Connection struct {
 	bridge *Bridge
-	chats  []*Chat
 
 	irc *ircConnection.IRCConnection
 
@@ -31,6 +37,9 @@ type Connection struct {
 
 	me           whapp.Me
 	localStorage map[string]string
+
+	m     sync.RWMutex
+	chats []ChatListItem
 }
 
 // BindSocket binds the given TCP connection.
@@ -138,7 +147,9 @@ func BindSocket(socket *net.TCPConn) error {
 
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0
-	for _, c := range conn.chats {
+	for _, item := range conn.chats {
+		c := item.chat
+
 		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
 
 		if empty || !conn.hasReplay() {
@@ -251,7 +262,9 @@ func BindSocket(socket *net.TCPConn) error {
 	return nil
 }
 
-func (conn *Connection) joinChat(chat *Chat) error {
+func (conn *Connection) joinChat(item ChatListItem) error {
+	chat := item.chat
+
 	// sanity checks
 	if chat == nil {
 		return fmt.Errorf("chat is nil")
@@ -262,9 +275,9 @@ func (conn *Connection) joinChat(chat *Chat) error {
 	}
 
 	// identifier sanity check
-	identifier := chat.Identifier()
+	identifier := item.Identifier
 	if identifier == "" || identifier == "#" {
-		return fmt.Errorf("chat.Identifier() is empty, chat.Name is %s", chat.Name)
+		return fmt.Errorf("identifier is empty, chat.Name is %s", chat.Name)
 	}
 
 	// send JOIN to client
@@ -318,25 +331,31 @@ func (conn *Connection) joinChat(chat *Chat) error {
 }
 
 // GetChatByID returns the chat with the given ID, if any.
-func (conn *Connection) GetChatByID(ID whapp.ID) *Chat {
-	for _, c := range conn.chats {
-		if c.ID == ID {
-			return c
+func (conn *Connection) GetChatByID(ID whapp.ID) (item ChatListItem, found bool) {
+	conn.m.RLock()
+	defer conn.m.RUnlock()
+
+	for _, item := range conn.chats {
+		if item.ID == ID {
+			return item, true
 		}
 	}
-	return nil
+	return ChatListItem{}, false
 }
 
 // GetChatByIdentifier returns the chat with the given identifier, if any.
-func (conn *Connection) GetChatByIdentifier(identifier string) *Chat {
+func (conn *Connection) GetChatByIdentifier(identifier string) (item ChatListItem, found bool) {
+	conn.m.RLock()
+	defer conn.m.RUnlock()
+
 	identifier = strings.ToLower(identifier)
 
-	for _, c := range conn.chats {
-		if strings.ToLower(c.Identifier()) == identifier {
-			return c
+	for _, item := range conn.chats {
+		if strings.ToLower(item.Identifier) == identifier {
+			return item, true
 		}
 	}
-	return nil
+	return ChatListItem{}, false
 }
 
 func (conn *Connection) convertChat(chat whapp.Chat) (*Chat, error) {
@@ -364,20 +383,57 @@ func (conn *Connection) convertChat(chat whapp.Chat) (*Chat, error) {
 	}, nil
 }
 
-func (conn *Connection) addChat(chat *Chat) {
-	if chat.IsGroupChat {
-		log.Printf("%-30s %3d participants\n", chat.Identifier(), len(chat.Participants))
-	} else {
-		log.Println(chat.Identifier())
-	}
+func (conn *Connection) addChat(chat *Chat) (res ChatListItem) {
+	identifier := chat.Identifier()
+	identifierLower := strings.ToLower(identifier)
+	n := 0 // number of other chats with the same identifier
 
-	for i, c := range conn.chats {
-		if c.ID == chat.ID {
-			conn.chats[i] = chat
-			return
+	conn.m.Lock()
+	defer conn.m.Unlock()
+
+	defer func() {
+		if chat.IsGroupChat {
+			log.Printf(
+				"%-30s %3d participants\n",
+				res.Identifier,
+				len(res.chat.Participants),
+			)
+		} else {
+			log.Println(res.Identifier)
+		}
+	}()
+
+	for i, item := range conn.chats {
+		// same chat as we already have, overwrite
+		if item.ID == chat.ID {
+			item.chat = chat
+			conn.chats[i] = item
+			return item
+		}
+
+		if item.chat != nil &&
+			strings.ToLower(item.chat.Identifier()) == identifierLower {
+			n++
 		}
 	}
-	conn.chats = append(conn.chats, chat)
+
+	// if there's another chat with the same identifier, append an unique
+	// number.
+	if n > 0 {
+		identifier = fmt.Sprintf("%s_%d", identifier, n+1)
+	}
+
+	// chat is new, append it to the list
+	item := ChatListItem{
+		Identifier: identifier,
+		ID:         chat.ID,
+
+		chat: chat,
+	}
+	conn.chats = append(conn.chats, item)
+	go conn.saveDatabaseEntry()
+
+	return item
 }
 
 // TODO: check if already set-up
@@ -401,6 +457,7 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 		return err
 	} else if found {
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
+		conn.chats = user.Chats
 
 		conn.irc.Status("logging in using stored session")
 
@@ -512,9 +569,14 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 	return nil
 }
 
-func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Presence, found bool, err error) {
-	if c := conn.GetChatByID(userID); c != nil {
-		presence, err := c.rawChat.GetPresence(conn.bridge.ctx, conn.bridge.WI)
+func (conn *Connection) getPresenceByUserID(
+	userID whapp.ID,
+) (presence whapp.Presence, found bool, err error) {
+	if item, _ := conn.GetChatByID(userID); item.chat != nil {
+		presence, err := item.chat.rawChat.GetPresence(
+			conn.bridge.ctx,
+			conn.bridge.WI,
+		)
 		return presence, true, err
 	}
 
@@ -522,9 +584,13 @@ func (conn *Connection) getPresenceByUserID(userID whapp.ID) (presence whapp.Pre
 }
 
 func (conn *Connection) saveDatabaseEntry() error {
+	conn.m.RLock()
+	defer conn.m.RUnlock()
+
 	err := userDb.SaveItem(conn.irc.Nick(), User{
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
+		Chats:                conn.chats,
 	})
 	if err != nil {
 		log.Printf("error while updating user entry: %s\n", err)

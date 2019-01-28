@@ -8,16 +8,15 @@ import (
 )
 
 func (conn *Connection) alternativeReplayWhappMessageHandle(msg whapp.Message) error {
-	var err error
-
-	chat := conn.GetChatByID(msg.Chat.ID)
-	if chat == nil {
-		chat, err = conn.convertChat(msg.Chat)
+	item, has := conn.GetChatByID(msg.Chat.ID)
+	if !has {
+		chat, err := conn.convertChat(msg.Chat)
 		if err != nil {
 			return err
 		}
-		conn.addChat(chat)
+		item = conn.addChat(chat)
 	}
+	chat := item.chat
 
 	if chat.HasMessageID(msg.ID.Serialized) {
 		return nil // already handled
@@ -42,7 +41,7 @@ func (conn *Connection) alternativeReplayWhappMessageHandle(msg whapp.Message) e
 
 	var to string
 	if chat.IsGroupChat || msg.IsSentByMe {
-		to = chat.Identifier()
+		to = item.Identifier
 	} else {
 		to = conn.irc.Nick()
 	}

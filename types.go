@@ -87,4 +87,5 @@ func (c *Chat) HasMessageID(id string) bool {
 type User struct {
 	LocalStorage         map[string]string `json:"localStorage"`
 	LastReceivedReceipts map[string]int64  `json:"lastReceivedReceipts"`
+	Chats                []ChatListItem    `json:"chats"`
 }

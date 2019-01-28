@@ -86,19 +86,18 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 		return nil
 	}
 
-	var err error
-
-	chat := conn.GetChatByID(msg.Chat.ID)
-	if chat == nil {
-		chat, err = conn.convertChat(msg.Chat)
+	item, has := conn.GetChatByID(msg.Chat.ID)
+	if !has {
+		chat, err := conn.convertChat(msg.Chat)
 		if err != nil {
 			return err
 		}
-		conn.addChat(chat)
+		item = conn.addChat(chat)
 	}
+	chat := item.chat
 
 	if chat.IsGroupChat && !chat.Joined {
-		if err := conn.joinChat(chat); err != nil {
+		if err := conn.joinChat(item); err != nil {
 			return err
 		}
 	}
@@ -115,7 +114,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	}
 
 	if msg.IsNotification {
-		return conn.handleWhappNotification(chat, msg)
+		return conn.handleWhappNotification(item, msg)
 	}
 
 	sender := formatContact(*msg.Sender)
@@ -129,7 +128,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 
 	var to string
 	if chat.IsGroupChat || msg.IsSentByMe {
-		to = chat.Identifier()
+		to = item.Identifier
 	} else {
 		to = conn.irc.Nick()
 	}
@@ -170,7 +169,9 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	return nil
 }
 
-func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) error {
+func (conn *Connection) handleWhappNotification(chatItem ChatListItem, msg whapp.Message) error {
+	chat := chatItem.chat
+
 	if msg.Type != "gp2" && msg.Type != "call_log" {
 		return fmt.Errorf("no idea what to do with notification type %s", msg.Type)
 	} else if len(msg.RecipientIDs) == 0 {
@@ -184,10 +185,9 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 			}
 		}
 
-		if chat := conn.GetChatByID(id); chat != nil && !chat.IsGroupChat {
-			return chat.Identifier()
+		if info, _ := conn.GetChatByID(id); info.chat != nil && !info.chat.IsGroupChat {
+			return info.Identifier
 		}
-
 		return id.User
 	}
 
@@ -222,25 +222,25 @@ func (conn *Connection) handleWhappNotification(chat *Chat, msg whapp.Message) e
 				// So just skip this, since otherwise we JOIN double.
 				break
 			}
-			str := fmt.Sprintf(":%s JOIN %s", recipient, chat.Identifier())
+			str := fmt.Sprintf(":%s JOIN %s", recipient, chatItem.Identifier)
 			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "leave":
-			str := fmt.Sprintf(":%s PART %s", recipient, chat.Identifier())
+			str := fmt.Sprintf(":%s PART %s", recipient, chatItem.Identifier)
 			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "remove":
-			str := fmt.Sprintf(":%s KICK %s %s", author, chat.Identifier(), recipient)
+			str := fmt.Sprintf(":%s KICK %s %s", author, chatItem.Identifier, recipient)
 			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
 
 		case "miss":
-			str := ircConnection.FormatPrivateMessage(author, chat.Identifier(), "-- missed call --")
+			str := ircConnection.FormatPrivateMessage(author, chatItem.Identifier, "-- missed call --")
 			if err := conn.irc.Write(msg.Time(), str); err != nil {
 				return err
 			}
