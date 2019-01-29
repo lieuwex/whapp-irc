@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"whapp-irc/ircConnection"
 	"whapp-irc/whapp"
 )
 
@@ -21,11 +22,14 @@ func (p *Participant) FullName() string {
 // SafeName returns the irc-safe name for the current Participant.
 func (p *Participant) SafeName() string {
 	str := p.FullName()
-	if numberRegex.MatchString(str) && ircSafeString(p.Contact.PushName) != "" {
-		str = p.Contact.PushName
+
+	if numberRegex.MatchString(str) {
+		if res := ircConnection.SafeString(p.Contact.PushName); res != "" {
+			return res
+		}
 	}
 
-	return ircSafeString(str)
+	return ircConnection.SafeString(str)
 }
 
 // Chat represents a chat on the bridge.
@@ -45,7 +49,7 @@ type Chat struct {
 
 // SafeName returns the IRC-safe name for the current chat.
 func (c *Chat) SafeName() string {
-	return ircSafeString(c.Name)
+	return ircConnection.SafeString(c.Name)
 }
 
 // Identifier returns the safe IRC identifier for the current chat.

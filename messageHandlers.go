@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 	"whapp-irc/ircConnection"
+	"whapp-irc/util"
 	"whapp-irc/whapp"
 )
 
@@ -31,7 +32,7 @@ var handlerNormal = func(conn *Connection, msg Message) error {
 				"%s [and %d more %s]",
 				line,
 				nRest,
-				plural(nRest, "line", "lines"),
+				util.Plural(nRest, "line", "lines"),
 			)
 		}
 
@@ -40,7 +41,7 @@ var handlerNormal = func(conn *Connection, msg Message) error {
 	}
 
 	for _, line := range lines {
-		logMessage(msg.Time(), msg.From, msg.To, line)
+		util.LogMessage(msg.Time(), msg.From, msg.To, line)
 		str := ircConnection.FormatPrivateMessage(msg.From, msg.To, line)
 		if err := conn.irc.Write(msg.Time(), str); err != nil {
 			return err
@@ -56,7 +57,7 @@ var handlerAlternativeReplay = func(conn *Connection, msg Message) error {
 	}
 
 	for _, line := range strings.Split(msg.Message, "\n") {
-		logMessage(msg.Time(), msg.From, msg.To, line)
+		util.LogMessage(msg.Time(), msg.From, msg.To, line)
 
 		msg := fmt.Sprintf(
 			"(%s) %s->%s: %s",

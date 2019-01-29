@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 	"time"
-	"whapp-irc/ircConnection"
+	"whapp-irc/util"
 
 	"gopkg.in/sorcix/irc.v2"
 	"gopkg.in/sorcix/irc.v2/ctcp"
@@ -24,7 +24,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			body = fmt.Sprintf("_%s_", text)
 		}
 
-		ircConnection.LogMessage(time.Now(), conn.irc.Nick(), to, body)
+		util.LogMessage(time.Now(), conn.irc.Nick(), to, body)
 
 		if to == "status" {
 			return nil

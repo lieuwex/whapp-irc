@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
+	"time"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -64,7 +66,8 @@ func (conn *Connection) setup(cancel context.CancelFunc) error {
 			return err
 		}
 
-		qrFile, err := fs.AddBlob("qr-"+strTimestamp(), "png", bytes)
+		timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+		qrFile, err := fs.AddBlob("qr-"+timestamp, "png", bytes)
 		if err != nil {
 			return err
 		}

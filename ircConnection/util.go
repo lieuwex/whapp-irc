@@ -1,16 +1,30 @@
 package ircConnection
 
 import (
+	"encoding/hex"
 	"fmt"
-	"log"
-	"time"
-)
+	"regexp"
 
-func LogMessage(time time.Time, from, to, message string) {
-	timeStr := time.Format("2006-01-02 15:04:05")
-	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)
-}
+	unidecode "github.com/mozillazg/go-unidecode"
+	"github.com/wangii/emoji"
+)
 
 func FormatPrivateMessage(from, to, line string) string {
 	return fmt.Sprintf(":%s PRIVMSG %s :%s", from, to, line)
+}
+
+var unsafeRegex = regexp.MustCompile(`(?i)[^a-z\d+:]`)
+
+// SafeString converts emojis into their corresponding tag, converts Unicode
+// into their matching ASCII representation and removes and left non safe
+// characters in the given str.
+func SafeString(str string) string {
+	emojiTagged := emoji.UnicodeToEmojiTag(str)
+	decoded := unidecode.Unidecode(emojiTagged)
+	ircSafe := unsafeRegex.ReplaceAllLiteralString(decoded, "")
+
+	if ircSafe == "" {
+		return "x" + hex.EncodeToString([]byte(str))
+	}
+	return ircSafe
 }

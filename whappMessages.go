@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"whapp-irc/ircConnection"
 	"whapp-irc/maps"
+	"whapp-irc/util"
 	"whapp-irc/whapp"
 )
 
@@ -51,7 +52,7 @@ func downloadAndStoreMedia(msg whapp.Message) error {
 			return err
 		}
 
-		ext := getExtensionByMimeOrBytes(msg.MimeType, bytes)
+		ext := util.GetExtensionByMimeOrBytes(msg.MimeType, bytes)
 		if ext == "" {
 			ext = filepath.Ext(msg.MediaFilename)
 			if ext != "" {

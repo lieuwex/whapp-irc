@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"whapp-irc/capabilities"
+	"whapp-irc/util"
 
 	"github.com/olebedev/emitter"
 	irc "gopkg.in/sorcix/irc.v2"
@@ -184,7 +185,7 @@ func (conn *IRCConnection) WriteListNow(messages []string) error {
 // Status writes the given message as if sent by 'status' to the current
 // connection.
 func (conn *IRCConnection) Status(body string) error {
-	LogMessage(time.Now(), "status", conn.nick, body)
+	util.LogMessage(time.Now(), "status", conn.nick, body)
 	msg := FormatPrivateMessage("status", conn.nick, body)
 	return conn.WriteNow(msg)
 }
