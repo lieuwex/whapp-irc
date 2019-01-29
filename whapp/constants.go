@@ -1,7 +1,7 @@
 package whapp
 
 const url = "https://web.whatsapp.com"
-const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
+const userAgent = "Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"
 
 var cryptKeys = map[string]string{
 	"image":    "576861747341707020496d616765204b657973",
