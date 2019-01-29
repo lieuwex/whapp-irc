@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"whapp-irc/bridge"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -14,7 +15,7 @@ import (
 
 // TODO: check if already set-up
 func (conn *Connection) setup(ctx context.Context) error {
-	bridge, err := StartBridge(ctx)
+	bridge, err := bridge.Start(ctx, pool, loggingLevel)
 	if err != nil {
 		return err
 	}

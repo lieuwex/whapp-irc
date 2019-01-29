@@ -1,10 +1,12 @@
-package main
+package bridge
 
 import (
 	"context"
 	"log"
 	"time"
 	"whapp-irc/whapp"
+
+	"github.com/chromedp/chromedp"
 )
 
 // A Bridge represents the bridging between an IRC connection and a WhatsApp web
@@ -13,8 +15,12 @@ type Bridge struct {
 	WI *whapp.Instance
 }
 
-// StartBridge creates and starts a bridge
-func StartBridge(ctx context.Context) (bridge *Bridge, err error) {
+// Start creates and starts a bridge
+func Start(
+	ctx context.Context,
+	pool *chromedp.Pool,
+	loggingLevel whapp.LoggingLevel,
+) (bridge *Bridge, err error) {
 	wi, err := whapp.MakeInstanceWithPool(ctx, pool, true, loggingLevel)
 	if err != nil {
 		return nil, err

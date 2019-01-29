@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"whapp-irc/bridge"
 	"whapp-irc/ircConnection"
 	"whapp-irc/whapp"
 )
@@ -27,7 +28,7 @@ type ChatListItem struct {
 
 // A Connection represents an IRC connection.
 type Connection struct {
-	bridge *Bridge
+	bridge *bridge.Bridge
 
 	irc *ircConnection.IRCConnection
 
