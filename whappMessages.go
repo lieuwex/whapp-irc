@@ -7,18 +7,19 @@ import (
 	"path/filepath"
 	"whapp-irc/ircConnection"
 	"whapp-irc/maps"
+	"whapp-irc/types"
 	"whapp-irc/util"
 	"whapp-irc/whapp"
 )
 
-func formatContact(contact whapp.Contact) Participant {
-	return Participant{
+func formatContact(contact whapp.Contact) types.Participant {
+	return types.Participant{
 		ID:      contact.ID,
 		Contact: contact,
 	}
 }
 
-func getMessageBody(msg whapp.Message, participants []Participant, me whapp.Me) string {
+func getMessageBody(msg whapp.Message, participants []types.Participant, me whapp.Me) string {
 	whappParticipants := make([]whapp.Participant, len(participants))
 	for i, p := range participants {
 		whappParticipants[i] = whapp.Participant(p)
@@ -87,7 +88,7 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 		}
 		item = conn.addChat(chat)
 	}
-	chat := item.chat
+	chat := item.Chat
 
 	if chat.IsGroupChat && !chat.Joined {
 		if err := conn.joinChat(item); err != nil {
@@ -142,8 +143,8 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 	return fn(conn, Message{from, to, body, false, &msg})
 }
 
-func (conn *Connection) handleWhappNotification(chatItem ChatListItem, msg whapp.Message) error {
-	chat := chatItem.chat
+func (conn *Connection) handleWhappNotification(chatItem types.ChatListItem, msg whapp.Message) error {
+	chat := chatItem.Chat
 
 	if msg.Type != "gp2" && msg.Type != "call_log" {
 		return fmt.Errorf("no idea what to do with notification type %s", msg.Type)
@@ -158,7 +159,7 @@ func (conn *Connection) handleWhappNotification(chatItem ChatListItem, msg whapp
 			}
 		}
 
-		if info, _ := conn.GetChatByID(id); info.chat != nil && !info.chat.IsGroupChat {
+		if info, _ := conn.GetChatByID(id); info.Chat != nil && !info.Chat.IsGroupChat {
 			return info.Identifier
 		}
 		return id.User

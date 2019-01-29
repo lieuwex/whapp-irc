@@ -12,19 +12,13 @@ import (
 	"time"
 	"whapp-irc/bridge"
 	"whapp-irc/ircConnection"
+	"whapp-irc/types"
 	"whapp-irc/whapp"
 )
 
 // queue up to ten irc messages, this is especially helpful to answer PINGs in
 // time, and during connection setup.
 const ircMessageQueueSize = 10
-
-type ChatListItem struct {
-	Identifier string   `json:"identifier"`
-	ID         whapp.ID `json:"id"`
-
-	chat *Chat
-}
 
 // A Connection represents an IRC connection.
 type Connection struct {
@@ -38,7 +32,7 @@ type Connection struct {
 	localStorage map[string]string
 
 	m     sync.RWMutex
-	chats []ChatListItem
+	chats []types.ChatListItem
 }
 
 // BindSocket binds the given TCP connection.
@@ -142,15 +136,15 @@ func BindSocket(socket *net.TCPConn) error {
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0
 	for _, item := range conn.chats {
-		c := item.chat
+		c := item.Chat
 
 		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
 
 		if empty || !conn.hasReplay() {
-			conn.timestampMap.Set(c.ID.String(), c.rawChat.Timestamp)
+			conn.timestampMap.Set(c.ID.String(), c.RawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
-		} else if c.rawChat.Timestamp <= prevTimestamp {
+		} else if c.RawChat.Timestamp <= prevTimestamp {
 			continue
 		}
 
@@ -159,7 +153,7 @@ func BindSocket(socket *net.TCPConn) error {
 			prevTimestamp = math.MinInt64
 		}
 
-		messages, err := c.rawChat.GetMessagesFromChatTillDate(
+		messages, err := c.RawChat.GetMessagesFromChatTillDate(
 			ctx,
 			conn.bridge.WI,
 			prevTimestamp,
@@ -260,8 +254,8 @@ func BindSocket(socket *net.TCPConn) error {
 	return nil
 }
 
-func (conn *Connection) joinChat(item ChatListItem) error {
-	chat := item.chat
+func (conn *Connection) joinChat(item types.ChatListItem) error {
+	chat := item.Chat
 
 	// sanity checks
 	if chat == nil {
@@ -286,7 +280,7 @@ func (conn *Connection) joinChat(item ChatListItem) error {
 
 	// send chat name and description (if any) as topic
 	topic := fmt.Sprintf(":whapp-irc 332 %s %s :%s", conn.irc.Nick(), identifier, chat.Name)
-	if desc := chat.rawChat.Description; desc != nil {
+	if desc := chat.RawChat.Description; desc != nil {
 		if d := strings.TrimSpace(desc.Description); d != "" {
 			d = strings.Replace(d, "\n", " ", -1)
 			topic = fmt.Sprintf("%s: %s", topic, d)
@@ -329,7 +323,7 @@ func (conn *Connection) joinChat(item ChatListItem) error {
 }
 
 // GetChatByID returns the chat with the given ID, if any.
-func (conn *Connection) GetChatByID(ID whapp.ID) (item ChatListItem, found bool) {
+func (conn *Connection) GetChatByID(ID whapp.ID) (item types.ChatListItem, found bool) {
 	conn.m.RLock()
 	defer conn.m.RUnlock()
 
@@ -338,11 +332,11 @@ func (conn *Connection) GetChatByID(ID whapp.ID) (item ChatListItem, found bool)
 			return item, true
 		}
 	}
-	return ChatListItem{}, false
+	return types.ChatListItem{}, false
 }
 
 // GetChatByIdentifier returns the chat with the given identifier, if any.
-func (conn *Connection) GetChatByIdentifier(identifier string) (item ChatListItem, found bool) {
+func (conn *Connection) GetChatByIdentifier(identifier string) (item types.ChatListItem, found bool) {
 	conn.m.RLock()
 	defer conn.m.RUnlock()
 
@@ -353,21 +347,21 @@ func (conn *Connection) GetChatByIdentifier(identifier string) (item ChatListIte
 			return item, true
 		}
 	}
-	return ChatListItem{}, false
+	return types.ChatListItem{}, false
 }
 
-func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*Chat, error) {
+func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*types.Chat, error) {
 	participants, err := chat.Participants(ctx, conn.bridge.WI)
 	if err != nil {
 		return nil, err
 	}
 
-	converted := make([]Participant, len(participants))
+	converted := make([]types.Participant, len(participants))
 	for i, p := range participants {
-		converted[i] = Participant(p)
+		converted[i] = types.Participant(p)
 	}
 
-	return &Chat{
+	return &types.Chat{
 		ID:   chat.ID,
 		Name: chat.Title(),
 
@@ -377,11 +371,11 @@ func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*Chat
 		Joined:     false,
 		MessageIDs: make([]string, 0),
 
-		rawChat: chat,
+		RawChat: chat,
 	}, nil
 }
 
-func (conn *Connection) addChat(chat *Chat) (res ChatListItem) {
+func (conn *Connection) addChat(chat *types.Chat) (res types.ChatListItem) {
 	identifier := chat.Identifier()
 	identifierLower := strings.ToLower(identifier)
 	n := 0 // number of other chats with the same identifier
@@ -394,7 +388,7 @@ func (conn *Connection) addChat(chat *Chat) (res ChatListItem) {
 			log.Printf(
 				"%-30s %3d participants\n",
 				res.Identifier,
-				len(res.chat.Participants),
+				len(res.Chat.Participants),
 			)
 		} else {
 			log.Println(res.Identifier)
@@ -404,13 +398,13 @@ func (conn *Connection) addChat(chat *Chat) (res ChatListItem) {
 	for i, item := range conn.chats {
 		// same chat as we already have, overwrite
 		if item.ID == chat.ID {
-			item.chat = chat
+			item.Chat = chat
 			conn.chats[i] = item
 			return item
 		}
 
-		if item.chat != nil &&
-			strings.ToLower(item.chat.Identifier()) == identifierLower {
+		if item.Chat != nil &&
+			strings.ToLower(item.Chat.Identifier()) == identifierLower {
 			n++
 		}
 	}
@@ -422,11 +416,11 @@ func (conn *Connection) addChat(chat *Chat) (res ChatListItem) {
 	}
 
 	// chat is new, append it to the list
-	item := ChatListItem{
+	item := types.ChatListItem{
 		Identifier: identifier,
 		ID:         chat.ID,
 
-		chat: chat,
+		Chat: chat,
 	}
 	conn.chats = append(conn.chats, item)
 	go conn.saveDatabaseEntry()
@@ -438,7 +432,7 @@ func (conn *Connection) saveDatabaseEntry() error {
 	conn.m.RLock()
 	defer conn.m.RUnlock()
 
-	err := userDb.SaveItem(conn.irc.Nick(), User{
+	err := userDb.SaveItem(conn.irc.Nick(), types.User{
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 		Chats:                conn.chats,

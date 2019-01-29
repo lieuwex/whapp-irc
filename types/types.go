@@ -1,4 +1,4 @@
-package main
+package types
 
 import (
 	"regexp"
@@ -8,8 +8,10 @@ import (
 
 const messageIDListSize = 750
 
-var numberRegex = regexp.MustCompile(`^\+[\d ]+$`)
-var nonNumberRegex = regexp.MustCompile(`[^\d]`)
+var (
+	numberRegex    = regexp.MustCompile(`^\+[\d ]+$`)
+	nonNumberRegex = regexp.MustCompile(`[^\d]`)
+)
 
 // A Participant is an user on WhatsApp.
 type Participant whapp.Participant
@@ -44,7 +46,7 @@ type Chat struct {
 	Joined     bool
 	MessageIDs []string
 
-	rawChat whapp.Chat
+	RawChat whapp.Chat
 }
 
 // SafeName returns the IRC-safe name for the current chat.
@@ -85,6 +87,13 @@ func (c *Chat) HasMessageID(id string) bool {
 		}
 	}
 	return false
+}
+
+type ChatListItem struct {
+	Identifier string   `json:"identifier"`
+	ID         whapp.ID `json:"id"`
+
+	Chat *Chat `json:"-"`
 }
 
 // User represents a user of the bridge.

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"whapp-irc/bridge"
+	"whapp-irc/types"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -23,7 +24,7 @@ func (conn *Connection) setup(ctx context.Context) error {
 
 	// if we have the current user in the database, try to relogin using the
 	// previous localStorage state
-	var user User
+	var user types.User
 	found, err := userDb.GetItem(conn.irc.Nick(), &user)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (conn *Connection) setup(ctx context.Context) error {
 
 	// convert chats to internal reprenstation, we do this using a second slice
 	// and a WaitGroup to preserve the initial order
-	chats := make([]*Chat, len(rawChats))
+	chats := make([]*types.Chat, len(rawChats))
 	var wg sync.WaitGroup
 	for i, raw := range rawChats {
 		wg.Add(1)
