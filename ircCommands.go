@@ -36,7 +36,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			return status("unknown chat")
 		}
 
-		if err := conn.bridge.WI.SendMessageToChatID(
+		if err := conn.WI.SendMessageToChatID(
 			ctx,
 			item.ID,
 			body,
@@ -103,7 +103,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 			if err := item.Chat.RawChat.SetAdmin(
 				ctx,
-				conn.bridge.WI,
+				conn.WI,
 				p.ID,
 				op,
 			); err != nil {
@@ -146,7 +146,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 				presenceStamp := "H"
 				if presence, err := item.Chat.RawChat.GetPresence(
 					ctx,
-					conn.bridge.WI,
+					conn.WI,
 				); err == nil && !presence.IsOnline {
 					presenceStamp = "G"
 				}
@@ -186,7 +186,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 		if groups, err := chat.RawChat.Contact.GetCommonGroups(
 			ctx,
-			conn.bridge.WI,
+			conn.WI,
 		); err == nil && len(groups) > 0 {
 			var names []string
 
@@ -238,7 +238,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 			if err := item.Chat.RawChat.RemoveParticipant(
 				ctx,
-				conn.bridge.WI,
+				conn.WI,
 				p.ID,
 			); err != nil {
 				str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
@@ -274,7 +274,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 		if err := item.Chat.RawChat.AddParticipant(
 			ctx,
-			conn.bridge.WI,
+			conn.WI,
 			personChatInfo.Chat.ID,
 		); err != nil {
 			str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())

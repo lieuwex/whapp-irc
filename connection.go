@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"whapp-irc/bridge"
 	"whapp-irc/ircConnection"
 	"whapp-irc/timestampMap"
 	"whapp-irc/types"
@@ -21,11 +20,11 @@ import (
 // time, and during connection setup.
 const ircMessageQueueSize = 10
 
-// A Connection represents an IRC connection.
+// A Connection represents the internal state of a whapp-irc connection.
 type Connection struct {
-	bridge *bridge.Bridge
+	WI *whapp.Instance
 
-	irc *ircConnection.IRCConnection
+	irc *ircConnection.Connection
 
 	timestampMap *timestampMap.Map
 
@@ -41,17 +40,13 @@ func BindSocket(socket *net.TCPConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	conn := &Connection{
-		irc: ircConnection.HandleConnection(ctx, socket),
-
-		timestampMap: timestampMap.New(),
-	}
+	irc := ircConnection.HandleConnection(ctx, socket)
 
 	// when the irc connection dies or the context is cancelled, kill
 	// everything off
 	go func() {
 		select {
-		case <-conn.irc.StopChannel():
+		case <-irc.StopChannel():
 		case <-ctx.Done():
 		}
 		cancel()
@@ -61,31 +56,26 @@ func BindSocket(socket *net.TCPConn) error {
 	select {
 	case <-ctx.Done():
 		return nil
-	case <-conn.irc.NickSetChannel():
+	case <-irc.NickSetChannel():
 	}
 
-	// send the welcome message to the user and setup the bridge.
-	if err := func() error {
-		if err := conn.irc.WriteListNow([]string{
-			fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", conn.irc.Nick(), conn.irc.Nick()),
-			fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", conn.irc.Nick()),
-			fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", conn.irc.Nick(), startTime),
-			fmt.Sprintf(":whapp-irc 004 %s :", conn.irc.Nick()),
-			fmt.Sprintf(":whapp-irc 005 %s PREFIX=(qo)~@ CHARSET=UTF-8 :are supported by this server", conn.irc.Nick()),
-			fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", conn.irc.Nick(), commit),
-			fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", conn.irc.Nick()),
-			fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", conn.irc.Nick()),
-		}); err != nil {
-			return err
-		}
+	// send welcome message
+	if err := irc.WriteListNow([]string{
+		fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", irc.Nick(), irc.Nick()),
+		fmt.Sprintf(":whapp-irc 002 %s :Your host is whapp-irc.", irc.Nick()),
+		fmt.Sprintf(":whapp-irc 003 %s :This server was created %s.", irc.Nick(), startTime),
+		fmt.Sprintf(":whapp-irc 004 %s :", irc.Nick()),
+		fmt.Sprintf(":whapp-irc 005 %s PREFIX=(qo)~@ CHARSET=UTF-8 :are supported by this server", irc.Nick()),
+		fmt.Sprintf(":whapp-irc 375 %s :The server is running on commit %s", irc.Nick(), commit),
+		fmt.Sprintf(":whapp-irc 372 %s :Enjoy the ride.", irc.Nick()),
+		fmt.Sprintf(":whapp-irc 376 %s :End of /MOTD command.", irc.Nick()),
+	}); err != nil {
+		return err
+	}
 
-		if err := conn.setup(ctx); err != nil {
-			log.Printf("err while setting up: %s\n", err.Error())
-			return err
-		}
-
-		return nil
-	}(); err != nil {
+	// setup bridge and connection
+	conn, err := setupConnection(ctx, irc)
+	if err != nil {
 		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
 		return err
 	}
@@ -156,7 +146,7 @@ func BindSocket(socket *net.TCPConn) error {
 
 		messages, err := c.RawChat.GetMessagesFromChatTillDate(
 			ctx,
-			conn.bridge.WI,
+			conn.WI,
 			prevTimestamp,
 		)
 		if err != nil {
@@ -183,7 +173,7 @@ func BindSocket(socket *net.TCPConn) error {
 	go func() {
 		defer cancel()
 
-		resCh, errCh := conn.bridge.WI.ListenLoggedIn(ctx, time.Second)
+		resCh, errCh := conn.WI.ListenLoggedIn(ctx, time.Second)
 
 		for {
 			select {
@@ -210,13 +200,7 @@ func BindSocket(socket *net.TCPConn) error {
 	go func() {
 		defer cancel()
 
-		// REVIEW: we use other `ctx`s here, is that correct?
-		// TODO: It looks like we should have to restart this, a bridge should
-		// have closer grasp of whatever messages should be sent. Currently a
-		// bridge is loosly defined of whatever it does. The struct itself
-		// should provide more functions, and we should do less. In a prefect
-		// world, WI isn't exposed.
-		messageCh, errCh := conn.bridge.WI.ListenForMessages(
+		messageCh, errCh := conn.WI.ListenForMessages(
 			ctx,
 			500*time.Millisecond,
 		)
@@ -352,7 +336,7 @@ func (conn *Connection) GetChatByIdentifier(identifier string) (item types.ChatL
 }
 
 func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*types.Chat, error) {
-	participants, err := chat.Participants(ctx, conn.bridge.WI)
+	participants, err := chat.Participants(ctx, conn.WI)
 	if err != nil {
 		return nil, err
 	}

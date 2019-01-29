@@ -9,18 +9,12 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// A Bridge represents the bridging between an IRC connection and a WhatsApp web
-// instance.
-type Bridge struct {
-	WI *whapp.Instance
-}
-
 // Start creates and starts a bridge
 func Start(
 	ctx context.Context,
 	pool *chromedp.Pool,
 	loggingLevel whapp.LoggingLevel,
-) (bridge *Bridge, err error) {
+) (bridge *whapp.Instance, err error) {
 	wi, err := whapp.MakeInstanceWithPool(ctx, pool, true, loggingLevel)
 	if err != nil {
 		return nil, err
@@ -39,5 +33,5 @@ func Start(
 		cancel()
 	}()
 
-	return &Bridge{wi}, nil
+	return wi, nil
 }

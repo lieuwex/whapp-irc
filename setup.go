@@ -8,36 +8,44 @@ import (
 	"sync"
 	"time"
 	"whapp-irc/bridge"
+	"whapp-irc/ircConnection"
+	"whapp-irc/timestampMap"
 	"whapp-irc/types"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-// TODO: check if already set-up
-func (conn *Connection) setup(ctx context.Context) error {
-	bridge, err := bridge.Start(ctx, pool, loggingLevel)
+func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Connection, error) {
+	wi, err := bridge.Start(ctx, pool, loggingLevel)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	conn.bridge = bridge
+
+	conn := &Connection{
+		WI: wi,
+
+		irc: irc,
+
+		timestampMap: timestampMap.New(),
+	}
 
 	// if we have the current user in the database, try to relogin using the
 	// previous localStorage state
 	var user types.User
 	found, err := userDb.GetItem(conn.irc.Nick(), &user)
 	if err != nil {
-		return err
+		return nil, err
 	} else if found {
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
 		conn.chats = user.Chats
 
 		conn.irc.Status("logging in using stored session")
 
-		if err := conn.bridge.WI.Navigate(ctx); err != nil {
-			return err
+		if err := wi.Navigate(ctx); err != nil {
+			return nil, err
 		}
-		if err := conn.bridge.WI.SetLocalStorage(
+		if err := wi.SetLocalStorage(
 			ctx,
 			user.LocalStorage,
 		); err != nil {
@@ -46,27 +54,27 @@ func (conn *Connection) setup(ctx context.Context) error {
 	}
 
 	// open site
-	state, err := conn.bridge.WI.Open(ctx)
+	state, err := wi.Open(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// if we aren't logged in yet we have to get the QR code and stuff
 	if state == whapp.Loggedout {
-		code, err := conn.bridge.WI.GetLoginCode(ctx)
+		code, err := wi.GetLoginCode(ctx)
 		if err != nil {
-			return fmt.Errorf("Error while retrieving login code: %s", err.Error())
+			return nil, fmt.Errorf("Error while retrieving login code: %s", err.Error())
 		}
 
 		bytes, err := qrcode.Encode(code, qrcode.High, 512)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
 		qrFile, err := fs.AddBlob("qr-"+timestamp, "png", bytes)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer func() {
 			if err = fs.RemoveFile(qrFile); err != nil {
@@ -75,37 +83,37 @@ func (conn *Connection) setup(ctx context.Context) error {
 		}()
 
 		if err := conn.irc.Status("Scan this QR code: " + qrFile.URL); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// waiting for login
-	if err := conn.bridge.WI.WaitLogin(ctx); err != nil {
-		return err
+	if err := wi.WaitLogin(ctx); err != nil {
+		return nil, err
 	}
 	conn.irc.Status("logged in")
 
 	// get localstorage (that contains new login information), and save it to
 	// the database
-	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(ctx)
+	conn.localStorage, err = wi.GetLocalStorage(ctx)
 	if err != nil {
 		log.Printf("error while getting local storage: %s\n", err.Error())
 	} else {
 		if err := conn.saveDatabaseEntry(); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// get information about the user
-	conn.me, err = conn.bridge.WI.GetMe(ctx)
+	conn.me, err = wi.GetMe(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// get raw chats
-	rawChats, err := conn.bridge.WI.GetAllChats(ctx)
+	rawChats, err := wi.GetAllChats(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// convert chats to internal reprenstation, we do this using a second slice
@@ -140,5 +148,5 @@ func (conn *Connection) setup(ctx context.Context) error {
 		conn.addChat(chat)
 	}
 
-	return nil
+	return conn, nil
 }

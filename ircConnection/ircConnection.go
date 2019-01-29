@@ -18,7 +18,7 @@ import (
 
 const queueSize = 10
 
-type IRCConnection struct {
+type Connection struct {
 	Caps *capabilities.CapabilitiesMap
 
 	receiveCh chan *irc.Message
@@ -48,9 +48,9 @@ func sendMessage(socket *net.TCPConn, msg string) error {
 // HandleConnection wraps around the given socket connection, which you
 // shouldn't use after providing it.  It will then handle all the IRC connection
 // stuff for you.  You should interface with it using it's methods.
-func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
+func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 	ctx, cancel := context.WithCancel(ctx)
-	conn := &IRCConnection{
+	conn := &Connection{
 		Caps: capabilities.MakeCapabilitiesMap(),
 
 		receiveCh: make(chan *irc.Message, queueSize),
@@ -133,7 +133,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
 }
 
 // Write writes the given message with the given timestamp to the connection
-func (conn *IRCConnection) Write(time time.Time, msg string) error {
+func (conn *Connection) Write(time time.Time, msg string) error {
 	if conn.Caps.Has("server-time") {
 		timeFormat := time.UTC().Format("2006-01-02T15:04:05.000Z")
 		msg = fmt.Sprintf("@time=%s %s", timeFormat, msg)
@@ -144,13 +144,13 @@ func (conn *IRCConnection) Write(time time.Time, msg string) error {
 }
 
 // WriteNow writes the given message with a timestamp of now to the connection.
-func (conn *IRCConnection) WriteNow(msg string) error {
+func (conn *Connection) WriteNow(msg string) error {
 	return conn.Write(time.Now(), msg)
 }
 
 // WriteListNow writes the given messages with a timestamp of now to the
 // connection.
-func (conn *IRCConnection) WriteListNow(messages []string) error {
+func (conn *Connection) WriteListNow(messages []string) error {
 	for _, msg := range messages {
 		if err := conn.WriteNow(msg); err != nil {
 			return err
@@ -161,38 +161,38 @@ func (conn *IRCConnection) WriteListNow(messages []string) error {
 
 // Status writes the given message as if sent by 'status' to the current
 // connection.
-func (conn *IRCConnection) Status(body string) error {
+func (conn *Connection) Status(body string) error {
 	util.LogMessage(time.Now(), "status", conn.nick, body)
 	msg := FormatPrivateMessage("status", conn.nick, body)
 	return conn.WriteNow(msg)
 }
 
 // ReceiveChannel returns the channel where new messages are sent on.
-func (conn *IRCConnection) ReceiveChannel() <-chan *irc.Message {
+func (conn *Connection) ReceiveChannel() <-chan *irc.Message {
 	return conn.receiveCh
 }
 
 // setNick sets the current connection's nickname to the given new nick, and
 // notifies any listeners.
-func (conn *IRCConnection) setNick(nick string) {
+func (conn *Connection) setNick(nick string) {
 	conn.nick = nick
 	<-conn.emitter.Emit("nick", nick)
 }
 
 // NickSetChannel returns a channel that fires when the nickname is changed.
-func (conn *IRCConnection) NickSetChannel() <-chan emitter.Event {
+func (conn *Connection) NickSetChannel() <-chan emitter.Event {
 	// REVIEW: should this be `On`?
 	return conn.emitter.Once("nick")
 }
 
 // Nick returns the nickname of the user at the other end of the current
 // connection.
-func (conn *IRCConnection) Nick() string {
+func (conn *Connection) Nick() string {
 	return conn.nick
 }
 
 // StopChannel returns a channel that closes when the current connection is
 // being shut down. No messages are sent over this channel.
-func (conn *IRCConnection) StopChannel() <-chan struct{} {
+func (conn *Connection) StopChannel() <-chan struct{} {
 	return conn.ctx.Done()
 }
