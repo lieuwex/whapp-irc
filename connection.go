@@ -243,7 +243,10 @@ func BindSocket(socket *net.TCPConn) error {
 			case msgFut := <-queue:
 				msgRes := <-msgFut
 				if msgRes.Err == nil {
-					msgRes.Err = conn.handleWhappMessage(msgRes.Message)
+					msgRes.Err = conn.handleWhappMessage(
+						msgRes.Message,
+						handlerNormal,
+					)
 				}
 
 				if msgRes.Err != nil {

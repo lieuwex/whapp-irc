@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"strings"
 	"whapp-irc/ircConnection"
 	"whapp-irc/maps"
 	"whapp-irc/whapp"
@@ -72,7 +71,7 @@ func downloadAndStoreMedia(msg whapp.Message) error {
 	return nil
 }
 
-func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
+func (conn *Connection) handleWhappMessage(msg whapp.Message, fn MessageHandler) error {
 	// HACK
 	if msg.Type == "e2e_notification" {
 		return nil
@@ -110,12 +109,12 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	}
 
 	sender := formatContact(*msg.Sender)
-	senderSafeName := sender.SafeName()
+	from := sender.SafeName()
 
 	if msg.IsSentByMeFromWeb {
 		return nil
 	} else if msg.IsSentByMe {
-		senderSafeName = conn.irc.Nick()
+		from = conn.irc.Nick()
 	}
 
 	var to string
@@ -130,35 +129,15 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message) error {
 	}
 
 	if msg.QuotedMessageObject != nil {
-		message := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
-		lines := strings.Split(message, "\n")
-
-		line := "> " + lines[0]
-		if nRest := len(lines) - 1; nRest > 0 {
-			line = fmt.Sprintf(
-				"%s [and %d more %s]",
-				line,
-				nRest,
-				plural(nRest, "line", "lines"),
-			)
-		}
-
-		str := ircConnection.FormatPrivateMessage(senderSafeName, to, line)
-		if err := conn.irc.Write(msg.Time(), str); err != nil {
+		body := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
+		message := Message{from, to, body, true, msg.QuotedMessageObject}
+		if err := fn(conn, message); err != nil {
 			return err
 		}
 	}
 
-	message := getMessageBody(msg, chat.Participants, conn.me)
-	for _, line := range strings.Split(message, "\n") {
-		logMessage(msg.Time(), senderSafeName, to, line)
-		str := ircConnection.FormatPrivateMessage(senderSafeName, to, line)
-		if err := conn.irc.Write(msg.Time(), str); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	body := getMessageBody(msg, chat.Participants, conn.me)
+	return fn(conn, Message{from, to, body, false, &msg})
 }
 
 func (conn *Connection) handleWhappNotification(chatItem ChatListItem, msg whapp.Message) error {

@@ -1,15 +1,18 @@
 package main
 
-import "whapp-irc/whapp"
+import (
+	"whapp-irc/whapp"
+)
 
 func (conn *Connection) hasReplay() bool {
 	return conn.irc.Caps.Has("whapp-irc/replay") || alternativeReplay
 }
 
 func (conn *Connection) handleWhappMessageReplay(msg whapp.Message) error {
+	fn := handlerNormal
 	if alternativeReplay {
-		return conn.alternativeReplayWhappMessageHandle(msg)
+		fn = handlerAlternativeReplay
 	}
 
-	return conn.handleWhappMessage(msg)
+	return conn.handleWhappMessage(msg, fn)
 }
