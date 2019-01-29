@@ -14,7 +14,6 @@ import (
 
 	"github.com/olebedev/emitter"
 	irc "gopkg.in/sorcix/irc.v2"
-	tomb "gopkg.in/tomb.v2"
 )
 
 const queueSize = 10
@@ -22,10 +21,9 @@ const queueSize = 10
 type IRCConnection struct {
 	Caps *capabilities.CapabilitiesMap
 
-	sendCh    chan string
 	receiveCh chan *irc.Message
 
-	tomb    *tomb.Tomb
+	ctx     context.Context
 	emitter *emitter.Emitter
 
 	nick string
@@ -51,14 +49,13 @@ func sendMessage(socket *net.TCPConn, msg string) error {
 // shouldn't use after providing it.  It will then handle all the IRC connection
 // stuff for you.  You should interface with it using it's methods.
 func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
-	tomb, ctx := tomb.WithContext(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	conn := &IRCConnection{
 		Caps: capabilities.MakeCapabilitiesMap(),
 
-		sendCh:    make(chan string, queueSize),
 		receiveCh: make(chan *irc.Message, queueSize),
 
-		tomb:    tomb,
+		ctx:     ctx,
 		emitter: &emitter.Emitter{},
 
 		socket: socket,
@@ -66,36 +63,16 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
 
 	// close socket when connection ends
 	go func() {
-		<-tomb.Dying()
+		<-ctx.Done()
 		socket.Close()
 	}()
-
-	// handle sending irc messages out using channel
-	tomb.Go(func() error {
-		defer close(conn.sendCh)
-
-		for {
-			select {
-			case <-tomb.Dying():
-				return nil
-
-			case msg, ok := <-conn.sendCh:
-				if !ok {
-					return fmt.Errorf("send channel closed")
-				}
-
-				if err := sendMessage(socket, msg); err != nil {
-					return err
-				}
-			}
-		}
-	})
 
 	// listen for and parse messages.
 	// this function also handles IRC commands which are independent of the rest of
 	// whapp-irc, such as PINGs.
-	tomb.Go(func() error {
+	go func() {
 		defer close(conn.receiveCh)
+		defer cancel()
 
 		write := conn.WriteNow
 		decoder := irc.NewDecoder(bufio.NewReader(socket))
@@ -105,7 +82,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
 				if err != io.EOF {
 					log.Printf("error while listening for IRC messages: %s\n", err)
 				}
-				return err
+				return
 			} else if msg == nil {
 				log.Println("got invalid IRC message, ignoring")
 				continue
@@ -116,11 +93,11 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
 				str := ":whapp-irc PONG whapp-irc :" + msg.Params[0]
 				if err := conn.WriteNow(str); err != nil {
 					log.Printf("error while sending PONG: %s", err)
-					return err
+					return
 				}
 			case "QUIT":
 				log.Printf("received QUIT from %s", conn.nick)
-				return fmt.Errorf("got QUIT")
+				return
 
 			case "NICK":
 				conn.setNick(msg.Params[0])
@@ -150,7 +127,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *IRCConnection {
 				conn.receiveCh <- msg
 			}
 		}
-	})
+	}()
 
 	return conn
 }
@@ -214,13 +191,8 @@ func (conn *IRCConnection) Nick() string {
 	return conn.nick
 }
 
-// Close closes the current connection
-func (conn *IRCConnection) Close() {
-	conn.tomb.Killf("IRCConnection.Close() called")
-}
-
 // StopChannel returns a channel that closes when the current connection is
 // being shut down. No messages are sent over this channel.
 func (conn *IRCConnection) StopChannel() <-chan struct{} {
-	return conn.tomb.Dying()
+	return conn.ctx.Done()
 }

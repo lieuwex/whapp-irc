@@ -53,17 +53,14 @@ func BindSocket(socket *net.TCPConn) error {
 		timestampMap: MakeTimestampMap(),
 	}
 
+	// when the irc connection dies or the context is cancelled, kill
+	// everything off
 	go func() {
 		select {
 		case <-conn.irc.StopChannel():
 		case <-ctx.Done():
 		}
-
-		// when the irc connection dies or the context is cancelled, kill
-		// everything off
 		cancel()
-		conn.irc.Close()
-		conn.bridge.Stop()
 	}()
 
 	// wait for the client to send a nickname
@@ -88,7 +85,7 @@ func BindSocket(socket *net.TCPConn) error {
 			return err
 		}
 
-		if err := conn.setup(cancel); err != nil {
+		if err := conn.setup(ctx); err != nil {
 			log.Printf("err while setting up: %s\n", err.Error())
 			return err
 		}
@@ -100,6 +97,13 @@ func BindSocket(socket *net.TCPConn) error {
 	}
 
 	// now that we have set-up the bridge...
+
+	go func() {
+		// this is actually kind rough, but it seems to work better
+		// currently...
+		<-conn.bridge.ctx.Done()
+		cancel()
+	}()
 
 	// actually handle most of the IRC messages
 	go func() {

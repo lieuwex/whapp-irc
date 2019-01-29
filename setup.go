@@ -13,17 +13,10 @@ import (
 )
 
 // TODO: check if already set-up
-func (conn *Connection) setup(cancel context.CancelFunc) error {
-	if _, err := conn.bridge.Start(); err != nil {
+func (conn *Connection) setup(ctx context.Context) error {
+	if _, err := conn.bridge.Start(ctx); err != nil {
 		return err
 	}
-
-	go func() {
-		// this is actually kind rough, but it seems to work better
-		// currently...
-		<-conn.bridge.ctx.Done()
-		cancel()
-	}()
 
 	// if we have the current user in the database, try to relogin using the
 	// previous localStorage state

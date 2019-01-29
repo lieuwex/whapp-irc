@@ -38,10 +38,6 @@
   version = "0.1.0"
 
 [[constraint]]
-  branch = "v2"
-  name = "gopkg.in/tomb.v2"
-
-[[constraint]]
   branch = "master"
   name = "github.com/olebedev/emitter"
 
