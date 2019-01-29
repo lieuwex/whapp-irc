@@ -14,9 +14,11 @@ import (
 
 // TODO: check if already set-up
 func (conn *Connection) setup(ctx context.Context) error {
-	if _, err := conn.bridge.Start(ctx); err != nil {
+	bridge, err := StartBridge(ctx)
+	if err != nil {
 		return err
 	}
+	conn.bridge = bridge
 
 	// if we have the current user in the database, try to relogin using the
 	// previous localStorage state
@@ -30,11 +32,11 @@ func (conn *Connection) setup(ctx context.Context) error {
 
 		conn.irc.Status("logging in using stored session")
 
-		if err := conn.bridge.WI.Navigate(conn.bridge.ctx); err != nil {
+		if err := conn.bridge.WI.Navigate(ctx); err != nil {
 			return err
 		}
 		if err := conn.bridge.WI.SetLocalStorage(
-			conn.bridge.ctx,
+			ctx,
 			user.LocalStorage,
 		); err != nil {
 			log.Printf("error while setting local storage: %s\n", err.Error())
@@ -42,14 +44,14 @@ func (conn *Connection) setup(ctx context.Context) error {
 	}
 
 	// open site
-	state, err := conn.bridge.WI.Open(conn.bridge.ctx)
+	state, err := conn.bridge.WI.Open(ctx)
 	if err != nil {
 		return err
 	}
 
 	// if we aren't logged in yet we have to get the QR code and stuff
 	if state == whapp.Loggedout {
-		code, err := conn.bridge.WI.GetLoginCode(conn.bridge.ctx)
+		code, err := conn.bridge.WI.GetLoginCode(ctx)
 		if err != nil {
 			return fmt.Errorf("Error while retrieving login code: %s", err.Error())
 		}
@@ -76,14 +78,14 @@ func (conn *Connection) setup(ctx context.Context) error {
 	}
 
 	// waiting for login
-	if err := conn.bridge.WI.WaitLogin(conn.bridge.ctx); err != nil {
+	if err := conn.bridge.WI.WaitLogin(ctx); err != nil {
 		return err
 	}
 	conn.irc.Status("logged in")
 
 	// get localstorage (that contains new login information), and save it to
 	// the database
-	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(conn.bridge.ctx)
+	conn.localStorage, err = conn.bridge.WI.GetLocalStorage(ctx)
 	if err != nil {
 		log.Printf("error while getting local storage: %s\n", err.Error())
 	} else {
@@ -93,13 +95,13 @@ func (conn *Connection) setup(ctx context.Context) error {
 	}
 
 	// get information about the user
-	conn.me, err = conn.bridge.WI.GetMe(conn.bridge.ctx)
+	conn.me, err = conn.bridge.WI.GetMe(ctx)
 	if err != nil {
 		return err
 	}
 
 	// get raw chats
-	rawChats, err := conn.bridge.WI.GetAllChats(conn.bridge.ctx)
+	rawChats, err := conn.bridge.WI.GetAllChats(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,7 +115,7 @@ func (conn *Connection) setup(ctx context.Context) error {
 		go func(i int, raw whapp.Chat) {
 			defer wg.Done()
 
-			chat, err := conn.convertChat(raw)
+			chat, err := conn.convertChat(ctx, raw)
 			if err != nil {
 				str := fmt.Sprintf("error while converting chat with ID %s, skipping", raw.ID)
 				conn.irc.Status(str)

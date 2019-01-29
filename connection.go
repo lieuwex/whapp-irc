@@ -46,8 +46,6 @@ func BindSocket(socket *net.TCPConn) error {
 	defer cancel()
 
 	conn := &Connection{
-		bridge: MakeBridge(),
-
 		irc: ircConnection.HandleConnection(ctx, socket),
 
 		timestampMap: MakeTimestampMap(),
@@ -98,13 +96,6 @@ func BindSocket(socket *net.TCPConn) error {
 
 	// now that we have set-up the bridge...
 
-	go func() {
-		// this is actually kind rough, but it seems to work better
-		// currently...
-		<-conn.bridge.ctx.Done()
-		cancel()
-	}()
-
 	// actually handle most of the IRC messages
 	go func() {
 		defer cancel()
@@ -120,7 +111,7 @@ func BindSocket(socket *net.TCPConn) error {
 					return
 				}
 
-				if err := conn.handleIRCCommand(msg); err != nil {
+				if err := conn.handleIRCCommand(ctx, msg); err != nil {
 					log.Printf("error handling new irc message: %s\n", err)
 
 					if err == io.ErrClosedPipe {
@@ -168,7 +159,7 @@ func BindSocket(socket *net.TCPConn) error {
 		}
 
 		messages, err := c.rawChat.GetMessagesFromChatTillDate(
-			conn.bridge.ctx,
+			ctx,
 			conn.bridge.WI,
 			prevTimestamp,
 		)
@@ -182,7 +173,7 @@ func BindSocket(socket *net.TCPConn) error {
 				continue
 			}
 
-			if err := conn.handleWhappMessageReplay(msg); err != nil {
+			if err := conn.handleWhappMessageReplay(ctx, msg); err != nil {
 				log.Printf("error handling older whapp message: %s\n", err.Error())
 				continue
 			}
@@ -196,7 +187,7 @@ func BindSocket(socket *net.TCPConn) error {
 	go func() {
 		defer cancel()
 
-		resCh, errCh := conn.bridge.WI.ListenLoggedIn(conn.bridge.ctx, time.Second)
+		resCh, errCh := conn.bridge.WI.ListenLoggedIn(ctx, time.Second)
 
 		for {
 			select {
@@ -230,7 +221,7 @@ func BindSocket(socket *net.TCPConn) error {
 		// should provide more functions, and we should do less. In a prefect
 		// world, WI isn't exposed.
 		messageCh, errCh := conn.bridge.WI.ListenForMessages(
-			conn.bridge.ctx,
+			ctx,
 			500*time.Millisecond,
 		)
 		queue := GetMessageQueue(ctx, messageCh, 50)
@@ -248,6 +239,7 @@ func BindSocket(socket *net.TCPConn) error {
 				msgRes := <-msgFut
 				if msgRes.Err == nil {
 					msgRes.Err = conn.handleWhappMessage(
+						ctx,
 						msgRes.Message,
 						handlerNormal,
 					)
@@ -363,8 +355,8 @@ func (conn *Connection) GetChatByIdentifier(identifier string) (item ChatListIte
 	return ChatListItem{}, false
 }
 
-func (conn *Connection) convertChat(chat whapp.Chat) (*Chat, error) {
-	participants, err := chat.Participants(conn.bridge.ctx, conn.bridge.WI)
+func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*Chat, error) {
+	participants, err := chat.Participants(ctx, conn.bridge.WI)
 	if err != nil {
 		return nil, err
 	}

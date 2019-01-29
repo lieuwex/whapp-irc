@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -72,7 +73,7 @@ func downloadAndStoreMedia(msg whapp.Message) error {
 	return nil
 }
 
-func (conn *Connection) handleWhappMessage(msg whapp.Message, fn MessageHandler) error {
+func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Message, fn MessageHandler) error {
 	// HACK
 	if msg.Type == "e2e_notification" {
 		return nil
@@ -80,7 +81,7 @@ func (conn *Connection) handleWhappMessage(msg whapp.Message, fn MessageHandler)
 
 	item, has := conn.GetChatByID(msg.Chat.ID)
 	if !has {
-		chat, err := conn.convertChat(msg.Chat)
+		chat, err := conn.convertChat(ctx, msg.Chat)
 		if err != nil {
 			return err
 		}

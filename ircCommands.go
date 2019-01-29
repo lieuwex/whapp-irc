@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"gopkg.in/sorcix/irc.v2/ctcp"
 )
 
-func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
+func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) error {
 	write := conn.irc.WriteNow
 	status := conn.irc.Status
 
@@ -36,7 +37,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		}
 
 		if err := conn.bridge.WI.SendMessageToChatID(
-			conn.bridge.ctx,
+			ctx,
 			item.ID,
 			body,
 		); err != nil {
@@ -101,7 +102,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			}
 
 			if err := item.chat.rawChat.SetAdmin(
-				conn.bridge.ctx,
+				ctx,
 				conn.bridge.WI,
 				p.ID,
 				op,
@@ -144,7 +145,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 
 				presenceStamp := "H"
 				if presence, err := item.chat.rawChat.GetPresence(
-					conn.bridge.ctx,
+					ctx,
 					conn.bridge.WI,
 				); err == nil && !presence.IsOnline {
 					presenceStamp = "G"
@@ -184,7 +185,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		write(str)
 
 		if groups, err := chat.rawChat.Contact.GetCommonGroups(
-			conn.bridge.ctx,
+			ctx,
 			conn.bridge.WI,
 		); err == nil && len(groups) > 0 {
 			var names []string
@@ -193,7 +194,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 				// TODO: this could be more efficient: currently calling
 				// `convertChat` makes it retrieve all participants in the
 				// group, which is obviously not necessary.
-				chat, err := conn.convertChat(group)
+				chat, err := conn.convertChat(ctx, group)
 				if err != nil {
 					continue
 				}
@@ -236,7 +237,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 			}
 
 			if err := item.chat.rawChat.RemoveParticipant(
-				conn.bridge.ctx,
+				ctx,
 				conn.bridge.WI,
 				p.ID,
 			); err != nil {
@@ -272,7 +273,7 @@ func (conn *Connection) handleIRCCommand(msg *irc.Message) error {
 		}
 
 		if err := item.chat.rawChat.AddParticipant(
-			conn.bridge.ctx,
+			ctx,
 			conn.bridge.WI,
 			personChatInfo.chat.ID,
 		); err != nil {
