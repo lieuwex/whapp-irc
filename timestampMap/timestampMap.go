@@ -1,19 +1,19 @@
-package main
+package timestampMap
 
 import "sync"
 
-type TimestampMap struct {
+type Map struct {
 	mutex sync.RWMutex
 	m     map[string]int64
 }
 
-func MakeTimestampMap() *TimestampMap {
-	return &TimestampMap{
+func New() *Map {
+	return &Map{
 		m: make(map[string]int64),
 	}
 }
 
-func (tm *TimestampMap) Get(key string) (val int64, found bool) {
+func (tm *Map) Get(key string) (val int64, found bool) {
 	tm.mutex.RLock()
 	defer tm.mutex.RUnlock()
 
@@ -21,14 +21,14 @@ func (tm *TimestampMap) Get(key string) (val int64, found bool) {
 	return val, found
 }
 
-func (tm *TimestampMap) Set(key string, val int64) {
+func (tm *Map) Set(key string, val int64) {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 
 	tm.m[key] = val
 }
 
-func (tm *TimestampMap) GetCopy() map[string]int64 {
+func (tm *Map) GetCopy() map[string]int64 {
 	tm.mutex.RLock()
 	defer tm.mutex.RUnlock()
 
@@ -39,14 +39,14 @@ func (tm *TimestampMap) GetCopy() map[string]int64 {
 	return res
 }
 
-func (tm *TimestampMap) Swap(m map[string]int64) {
+func (tm *Map) Swap(m map[string]int64) {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 
 	tm.m = m
 }
 
-func (tm *TimestampMap) Length() int {
+func (tm *Map) Length() int {
 	tm.mutex.RLock()
 	defer tm.mutex.RUnlock()
 
