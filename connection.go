@@ -76,7 +76,7 @@ func BindSocket(socket *net.TCPConn) error {
 	// setup bridge and connection
 	conn, err := setupConnection(ctx, irc)
 	if err != nil {
-		conn.irc.Status("erroring setting up whapp bridge: " + err.Error())
+		irc.Status("erroring setting up whapp bridge: " + err.Error())
 		return err
 	}
 
