@@ -8,6 +8,7 @@ import (
 	"whapp-irc/database/lockmap"
 )
 
+// A Database is a struct to manage a on disk persisted JSON object database.
 type Database struct {
 	Folder  string
 	lockMap *lockmap.LockMap

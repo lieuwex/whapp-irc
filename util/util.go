@@ -8,40 +8,37 @@ import (
 	"github.com/h2non/filetype"
 )
 
-func getExtension(bytes []byte) string {
+// getExtensionByBytes returns the extension by the given bytes.
+func getExtensionByBytes(bytes []byte) string {
 	typ, err := filetype.Match(bytes)
-	if err != nil {
+	if err != nil || typ == filetype.Unknown {
 		return ""
 	}
-
-	res := typ.Extension
-	if res == "unknown" {
-		return ""
-	}
-	return res
+	return typ.Extension
 }
 
+// getExtensionByMime returns the extension by the given mime type.
 func getExtensionByMime(typ string) (string, error) {
 	extensions, err := mime.ExtensionsByType(typ)
 	if err != nil {
 		return "", err
-	}
-
-	if len(extensions) == 0 {
+	} else if len(extensions) == 0 {
 		return "", nil
 	}
-
 	return extensions[0][1:], nil
 }
 
+// GetExtensionByMimeOrBytes returns the extension by the given mime, or if that
+// fails, by the given bytes.
 func GetExtensionByMimeOrBytes(mime string, bytes []byte) string {
 	if res, err := getExtensionByMime(mime); res != "" && err == nil {
 		return res
 	}
 
-	return getExtension(bytes)
+	return getExtensionByBytes(bytes)
 }
 
+// Plural returns singular if count is ±1, plural otherwise.
 func Plural(count int, singular, plural string) string {
 	if count == 1 || count == -1 {
 		return singular
@@ -50,6 +47,7 @@ func Plural(count int, singular, plural string) string {
 	return plural
 }
 
+// LogMessage logs the given chat message to the log.
 func LogMessage(time time.Time, from, to, message string) {
 	timeStr := time.Format("2006-01-02 15:04:05")
 	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)

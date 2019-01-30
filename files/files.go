@@ -9,12 +9,14 @@ import (
 	"sync"
 )
 
+// File represents a file on the FileServer.
 type File struct {
 	Hash string
 	Path string
 	URL  string
 }
 
+// FileServer represents a (running) file server.
 type FileServer struct {
 	Host      string
 	Port      string
@@ -24,9 +26,12 @@ type FileServer struct {
 	httpServer *http.Server
 
 	mutex      sync.RWMutex
-	hashToPath map[string]*File
+	hashToPath map[string]File
 }
 
+// MakeFileServer returns a new FileServer in the given dir, using the given
+// options. It first scans the dir for older files, and loads them in the
+// database.
 func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) {
 	fs := &FileServer{
 		Host:      host,
@@ -34,7 +39,7 @@ func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) 
 		UseHTTPS:  useHTTPS,
 		Directory: dir,
 
-		hashToPath: make(map[string]*File),
+		hashToPath: make(map[string]File),
 	}
 
 	err := os.Mkdir("./"+dir, 0700)
@@ -48,11 +53,11 @@ func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) 
 			return nil, err
 		}
 
-		for _, f := range files {
-			fname := f.Name()
+		for _, diskFile := range files {
+			fname := diskFile.Name()
 			dotIndex := strings.LastIndexByte(fname, '.')
 
-			if f.IsDir() || fname[0] == '.' {
+			if diskFile.IsDir() || fname[0] == '.' {
 				continue
 			}
 
@@ -71,13 +76,18 @@ func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) 
 				continue
 			}
 
-			fs.hashToPath[hash] = fs.makeFile(hash, ext)
+			f, err := fs.makeFile(hash, ext)
+			if err != nil {
+				return nil, err
+			}
+			fs.hashToPath[hash] = f
 		}
 	}
 
 	return fs, nil
 }
 
+// Start starts the current FileServer.
 func (fs *FileServer) Start() error {
 	fs.httpServer = &http.Server{
 		Addr:    ":" + fs.Port,
@@ -87,6 +97,7 @@ func (fs *FileServer) Start() error {
 	return fs.httpServer.ListenAndServe()
 }
 
+// Stop stops the current FileServer.
 func (fs *FileServer) Stop() error {
 	if err := fs.httpServer.Close(); err != nil {
 		return err
@@ -96,9 +107,9 @@ func (fs *FileServer) Stop() error {
 	return nil
 }
 
-func (fs *FileServer) makeFile(hash, ext string) *File {
+func (fs *FileServer) makeFile(hash, ext string) (File, error) {
 	if hash == "" {
-		return nil
+		return File{}, ErrHashEmpty
 	}
 
 	urlHash, err := b64tob64url(hash)
@@ -126,36 +137,38 @@ func (fs *FileServer) makeFile(hash, ext string) *File {
 
 	path := fmt.Sprintf("./%s/%s", fs.Directory, fname)
 
-	return &File{
+	return File{
 		Hash: hash,
 		URL:  url,
 		Path: path,
-	}
+	}, nil
 }
 
-func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (*File, error) {
+// AddBlob adds the given bytes blob to the database, using the given hash and
+// extension for the file name.
+func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (File, error) {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
 	if hash == "" || len(bytes) == 0 {
-		return nil, fmt.Errorf("hash or bytes can't be empty")
+		return File{}, fmt.Errorf("hash or bytes can't be empty")
 	}
 
-	f := fs.makeFile(hash, ext)
-	if f == nil {
-		return nil, fmt.Errorf("error while creating file object")
-	}
-
-	err := ioutil.WriteFile(f.Path, bytes, 0644)
+	f, err := fs.makeFile(hash, ext)
 	if err != nil {
-		return nil, err
+		return File{}, err
+	}
+
+	if err := ioutil.WriteFile(f.Path, bytes, 0644); err != nil {
+		return File{}, err
 	}
 
 	fs.hashToPath[hash] = f
 	return f, nil
 }
 
-func (fs *FileServer) RemoveFile(file *File) error {
+// RemoveFile removes the file from disk matching the given file struct.
+func (fs *FileServer) RemoveFile(file File) error {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
@@ -167,7 +180,8 @@ func (fs *FileServer) RemoveFile(file *File) error {
 	return nil
 }
 
-func (fs *FileServer) GetFileByHash(hash string) (file *File, has bool) {
+// GetFileByHash returns the File struct matching the given hash.
+func (fs *FileServer) GetFileByHash(hash string) (file File, has bool) {
 	fs.mutex.RLock()
 	defer fs.mutex.RUnlock()
 

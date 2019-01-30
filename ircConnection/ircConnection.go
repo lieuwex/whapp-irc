@@ -18,8 +18,9 @@ import (
 
 const queueSize = 10
 
+// Connection represents an IRC connection.
 type Connection struct {
-	Caps *capabilities.CapabilitiesMap
+	Caps *capabilities.Map
 
 	receiveCh chan *irc.Message
 
@@ -50,7 +51,7 @@ func sendMessage(socket *net.TCPConn, msg string) error {
 func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 	ctx, cancel := context.WithCancel(ctx)
 	conn := &Connection{
-		Caps: capabilities.MakeCapabilitiesMap(),
+		Caps: capabilities.MakeMap(),
 
 		receiveCh: make(chan *irc.Message, queueSize),
 

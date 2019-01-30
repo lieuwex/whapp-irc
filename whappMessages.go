@@ -101,9 +101,9 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 	}
 	chat.AddMessageID(msg.ID.Serialized)
 
-	lastTimestamp, found := conn.timestampMap.Get(chat.ID.String())
+	lastTimestamp, found := conn.timestampMap.Get(chat.ID)
 	if !found || msg.Timestamp > lastTimestamp {
-		conn.timestampMap.Set(chat.ID.String(), msg.Timestamp)
+		conn.timestampMap.Set(chat.ID, msg.Timestamp)
 		go conn.saveDatabaseEntry()
 	}
 

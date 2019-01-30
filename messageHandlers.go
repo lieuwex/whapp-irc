@@ -9,6 +9,7 @@ import (
 	"whapp-irc/whapp"
 )
 
+// Message represents a WhatsApp message, with some basic formatting for IRC.
 type Message struct {
 	From, To string
 	Message  string
@@ -16,10 +17,13 @@ type Message struct {
 	Original *whapp.Message
 }
 
+// Time returns the time the message has been sent.
 func (msg Message) Time() time.Time {
 	return msg.Original.Time()
 }
 
+// MessageHandler represents a handler for a WhatsApp message to be sent to an
+// IRC client.
 type MessageHandler func(conn *Connection, msg Message) error
 
 var handlerNormal = func(conn *Connection, msg Message) error {

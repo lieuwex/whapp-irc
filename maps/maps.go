@@ -2,14 +2,17 @@ package maps
 
 import "fmt"
 
+// Provider is a provider for a map.
 type Provider int
 
 const (
+	// GoogleMaps is the provider using Google Maps
 	GoogleMaps Provider = iota
+	// OpenStreetMap is the provider using OpenStreetMap.org
 	OpenStreetMap
 )
 
-// googleMaps returns a URL to the given latitude and longitude on Google Maps.
+// googleMaps returns an URL to the given latitude and longitude on Google Maps.
 func googleMaps(latitude, longitude float64) string {
 	return fmt.Sprintf(
 		"https://maps.google.com/?q=%f,%f",
@@ -18,7 +21,7 @@ func googleMaps(latitude, longitude float64) string {
 	)
 }
 
-// openStreetMap returns a URL to the given latitude and longitude on
+// openStreetMap returns an URL to the given latitude and longitude on
 // OpenStreetMap.org.
 func openStreetMap(latitude, longitude float64) string {
 	return fmt.Sprintf(
@@ -28,6 +31,8 @@ func openStreetMap(latitude, longitude float64) string {
 	)
 }
 
+// ByProvider returns an URL to the given latitude and longitude on the given
+// provider.
 func ByProvider(provider Provider, latitude, longitude float64) string {
 	switch provider {
 	case OpenStreetMap:

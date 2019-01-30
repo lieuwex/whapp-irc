@@ -130,10 +130,10 @@ func BindSocket(socket *net.TCPConn) error {
 	for _, item := range conn.chats {
 		c := item.Chat
 
-		prevTimestamp, found := conn.timestampMap.Get(c.ID.String())
+		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
 		if empty || !conn.hasReplay() {
-			conn.timestampMap.Set(c.ID.String(), c.RawChat.Timestamp)
+			conn.timestampMap.Set(c.ID, c.RawChat.Timestamp)
 			go conn.saveDatabaseEntry()
 			continue
 		} else if c.RawChat.Timestamp <= prevTimestamp {
