@@ -7,42 +7,29 @@ import (
 	"whapp-irc/config"
 	"whapp-irc/database"
 	"whapp-irc/files"
-	"whapp-irc/maps"
 	"whapp-irc/whapp"
 
 	"github.com/chromedp/chromedp"
 )
 
 var (
+	conf config.Config
+
 	fs     *files.FileServer
 	userDb *database.Database
 	pool   *chromedp.Pool
-
-	loggingLevel      whapp.LoggingLevel
-	mapProvider       maps.Provider
-	alternativeReplay bool
 
 	startTime = time.Now()
 	commit    string
 )
 
-func makePool(loggingLevel whapp.LoggingLevel) (*chromedp.Pool, error) {
-	switch loggingLevel {
-	case whapp.LogLevelVerbose:
-		return chromedp.NewPool(chromedp.PoolLog(log.Printf, log.Printf, log.Printf))
-	default:
-		return chromedp.NewPool()
-	}
-}
-
 func main() {
-	config, err := config.ReadEnvVars()
+	var err error
+
+	conf, err = config.ReadEnvVars()
 	if err != nil {
 		panic(err)
 	}
-	loggingLevel = config.LoggingLevel
-	mapProvider = config.MapProvider
-	alternativeReplay = config.AlternativeReplay
 
 	userDb, err = database.MakeDatabase("db/users")
 	if err != nil {
@@ -50,10 +37,10 @@ func main() {
 	}
 
 	fs, err = files.MakeFileServer(
-		config.FileServerHost,
-		config.FileServerPort,
+		conf.FileServerHost,
+		conf.FileServerPort,
 		"files",
-		config.FileServerHTTPS,
+		conf.FileServerHTTPS,
 	)
 	if err != nil {
 		panic(err)
@@ -65,13 +52,20 @@ func main() {
 	}()
 	defer fs.Stop()
 
-	pool, err = makePool(loggingLevel)
+	pool, err = func() (*chromedp.Pool, error) {
+		switch conf.LogLevel {
+		case whapp.LogLevelVerbose:
+			return chromedp.NewPool(chromedp.PoolLog(log.Printf, log.Printf, log.Printf))
+		default:
+			return chromedp.NewPool()
+		}
+	}()
 	if err != nil {
 		panic(err)
 	}
 	defer pool.Shutdown()
 
-	addr, err := net.ResolveTCPAddr("tcp", ":"+config.IRCPort)
+	addr, err := net.ResolveTCPAddr("tcp", ":"+conf.IRCPort)
 	if err != nil {
 		panic(err)
 	}

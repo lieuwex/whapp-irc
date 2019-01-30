@@ -18,7 +18,7 @@ import (
 )
 
 func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Connection, error) {
-	wi, err := bridge.Start(ctx, pool, loggingLevel)
+	wi, err := bridge.Start(ctx, pool, conf.LogLevel)
 	if err != nil {
 		return nil, err
 	}

@@ -27,7 +27,7 @@ func getMessageBody(msg whapp.Message, participants []types.Participant, me whap
 
 	if msg.Location != nil {
 		return maps.ByProvider(
-			mapProvider,
+			conf.MapProvider,
 			msg.Location.Latitude,
 			msg.Location.Longitude,
 		)

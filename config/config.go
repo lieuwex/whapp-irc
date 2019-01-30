@@ -17,7 +17,7 @@ type Config struct {
 
 	IRCPort string
 
-	LoggingLevel whapp.LoggingLevel
+	LogLevel whapp.LoggingLevel
 
 	MapProvider maps.Provider
 
@@ -79,7 +79,7 @@ func ReadEnvVars() (Config, error) {
 
 		IRCPort: ircPort,
 
-		LoggingLevel: logLevel,
+		LogLevel: logLevel,
 
 		MapProvider: mapProvider,
 
