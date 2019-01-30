@@ -11,6 +11,7 @@ import (
 	"whapp-irc/ircConnection"
 	"whapp-irc/timestampMap"
 	"whapp-irc/types"
+	"whapp-irc/util"
 	"whapp-irc/whapp"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -49,7 +50,7 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 			ctx,
 			user.LocalStorage,
 		); err != nil {
-			log.Printf("error while setting local storage: %s\n", err.Error())
+			log.Printf("error while setting local storage: %s\n", err)
 		}
 	}
 
@@ -63,7 +64,7 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 	if state == whapp.Loggedout {
 		code, err := wi.GetLoginCode(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("Error while retrieving login code: %s", err.Error())
+			return nil, fmt.Errorf("Error while retrieving login code: %s", err)
 		}
 
 		bytes, err := qrcode.Encode(code, qrcode.High, 512)
@@ -77,9 +78,8 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 			return nil, err
 		}
 		defer func() {
-			if err = fs.RemoveFile(qrFile); err != nil {
-				log.Printf("error while removing QR code: %s\n", err.Error())
-			}
+			err := fs.RemoveFile(qrFile)
+			util.LogIfErr("error while removing QR code", err)
 		}()
 
 		if err := conn.irc.Status("Scan this QR code: " + qrFile.URL); err != nil {
@@ -97,7 +97,7 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 	// the database
 	conn.localStorage, err = wi.GetLocalStorage(ctx)
 	if err != nil {
-		log.Printf("error while getting local storage: %s\n", err.Error())
+		log.Printf("error while getting local storage: %s\n", err)
 	} else {
 		if err := conn.saveDatabaseEntry(); err != nil {
 			return nil, err

@@ -41,7 +41,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			item.ID,
 			body,
 		); err != nil {
-			str := fmt.Sprintf("err while sending: %s", err.Error())
+			str := fmt.Sprintf("err while sending: %s", err)
 			log.Println(str)
 			return status(str)
 		}
@@ -67,7 +67,6 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 				return status("unknown chat")
 			}
 
-			// TODO: some way that we don't rejoin a person later.
 			item.Chat.Joined = false
 		}
 
@@ -107,7 +106,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 				p.ID,
 				op,
 			); err != nil {
-				str := fmt.Sprintf("error while opping %s: %s", nick, err.Error())
+				str := fmt.Sprintf("error while opping %s: %s", nick, err)
 				log.Println(str)
 				return status(str)
 			}
@@ -241,7 +240,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 				conn.WI,
 				p.ID,
 			); err != nil {
-				str := fmt.Sprintf("error while kicking %s: %s", nick, err.Error())
+				str := fmt.Sprintf("error while kicking %s: %s", nick, err)
 				log.Println(str)
 				return status(str)
 			}
@@ -277,7 +276,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			conn.WI,
 			personChatInfo.Chat.ID,
 		); err != nil {
-			str := fmt.Sprintf("error while adding %s: %s", nick, err.Error())
+			str := fmt.Sprintf("error while adding %s: %s", nick, err)
 			log.Println(str)
 			return status(str)
 		}

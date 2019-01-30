@@ -54,3 +54,10 @@ func LogMessage(time time.Time, from, to, message string) {
 	timeStr := time.Format("2006-01-02 15:04:05")
 	log.Printf("(%s) %s->%s: %s", timeStr, from, to, message)
 }
+
+// LogIfErr logs the given err with the given prefix if err is not nil.
+func LogIfErr(prefix string, err error) {
+	if err != nil {
+		log.Printf("%s: %s", prefix, err)
+	}
+}

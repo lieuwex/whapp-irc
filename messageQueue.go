@@ -27,7 +27,11 @@ func GetMessageQueue(ctx context.Context, ch <-chan whapp.Message, queueSize int
 			case <-ctx.Done():
 				return
 
-			case msg := <-ch:
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+
 				ch := make(chan MessageRes)
 				queue <- ch
 

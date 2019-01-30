@@ -28,7 +28,6 @@ type Connection struct {
 
 	nick string
 
-	// TODO: remove this
 	socket *net.TCPConn
 }
 

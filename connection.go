@@ -13,6 +13,7 @@ import (
 	"whapp-irc/ircConnection"
 	"whapp-irc/timestampMap"
 	"whapp-irc/types"
+	"whapp-irc/util"
 	"whapp-irc/whapp"
 )
 
@@ -159,10 +160,8 @@ func BindSocket(socket *net.TCPConn) error {
 				continue
 			}
 
-			if err := conn.handleWhappMessageReplay(ctx, msg); err != nil {
-				log.Printf("error handling older whapp message: %s\n", err.Error())
-				continue
-			}
+			err := conn.handleWhappMessageReplay(ctx, msg)
+			util.LogIfErr("error handling older whapp message", err)
 		}
 	}
 
@@ -181,7 +180,7 @@ func BindSocket(socket *net.TCPConn) error {
 				return
 
 			case err := <-errCh:
-				log.Printf("error while listening for whatsapp loggedin state: %s\n", err.Error())
+				util.LogIfErr("error while listening for whatsapp loggedin state", err)
 				return
 
 			case res := <-resCh:
@@ -212,7 +211,7 @@ func BindSocket(socket *net.TCPConn) error {
 				return
 
 			case err := <-errCh:
-				log.Printf("error while listening for whatsapp messages: %s\n", err.Error())
+				util.LogIfErr("error while listening for whatsapp messages", err)
 				return
 
 			case msgFut := <-queue:
@@ -225,10 +224,7 @@ func BindSocket(socket *net.TCPConn) error {
 					)
 				}
 
-				if msgRes.Err != nil {
-					log.Printf("error handling new whapp message: %s\n", msgRes.Err)
-					continue
-				}
+				util.LogIfErr("error handling new whapp message", msgRes.Err)
 			}
 		}
 	}()
@@ -422,8 +418,6 @@ func (conn *Connection) saveDatabaseEntry() error {
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 		Chats:                conn.chats,
 	})
-	if err != nil {
-		log.Printf("error while updating user entry: %s\n", err)
-	}
+	util.LogIfErr("error while updating user entry", err)
 	return err
 }

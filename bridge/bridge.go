@@ -26,8 +26,7 @@ func Start(
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		if err := wi.Shutdown(ctx); err != nil {
-			// TODO: how do we handle this?
-			log.Printf("error while shutting down: %s", err.Error())
+			log.Printf("error while shutting down: %s", err)
 		}
 
 		cancel()

@@ -60,7 +60,7 @@ func main() {
 	}
 	go func() {
 		if err := fs.Start(); err != nil {
-			log.Printf("error while starting fileserver: %s", err)
+			log.Fatalf("error while starting fileserver: %s", err)
 		}
 	}()
 	defer fs.Stop()
