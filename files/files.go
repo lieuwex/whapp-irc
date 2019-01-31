@@ -147,11 +147,10 @@ func (fs *FileServer) makeFile(hash, ext string) (File, error) {
 // AddBlob adds the given bytes blob to the database, using the given hash and
 // extension for the file name.
 func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (File, error) {
-	fs.mutex.Lock()
-	defer fs.mutex.Unlock()
-
-	if hash == "" || len(bytes) == 0 {
-		return File{}, fmt.Errorf("hash or bytes can't be empty")
+	if hash == "" {
+		return File{}, ErrHashEmpty
+	} else if len(bytes) == 0 {
+		return File{}, ErrBytesEmpty
 	}
 
 	f, err := fs.makeFile(hash, ext)
@@ -163,20 +162,23 @@ func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (File, error) {
 		return File{}, err
 	}
 
+	fs.mutex.Lock()
 	fs.hashToPath[hash] = f
+	defer fs.mutex.Unlock()
+
 	return f, nil
 }
 
 // RemoveFile removes the file from disk matching the given file struct.
 func (fs *FileServer) RemoveFile(file File) error {
-	fs.mutex.Lock()
-	defer fs.mutex.Unlock()
-
 	if err := os.Remove(file.Path); err != nil {
 		return err
 	}
 
+	fs.mutex.Lock()
 	delete(fs.hashToPath, file.Hash)
+	fs.mutex.Unlock()
+
 	return nil
 }
 

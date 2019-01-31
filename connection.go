@@ -81,7 +81,7 @@ func BindSocket(socket *net.TCPConn) error {
 	// setup bridge and connection
 	conn, err := setupConnection(ctx, irc)
 	if err != nil {
-		irc.Status("erroring setting up whapp bridge: " + err.Error())
+		irc.Status("error setting up whapp bridge: " + err.Error())
 		return err
 	}
 
@@ -352,9 +352,6 @@ func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*type
 
 		IsGroupChat:  chat.IsGroupChat,
 		Participants: converted,
-
-		Joined:     false,
-		MessageIDs: make([]string, 0),
 
 		RawChat: chat,
 	}, nil

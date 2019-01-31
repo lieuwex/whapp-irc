@@ -248,8 +248,6 @@ func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
 // ListenLoggedIn listens for login state changes by polling it every
 // `interval`.
 func (wi *Instance) ListenLoggedIn(ctx context.Context, interval time.Duration) (<-chan bool, <-chan error) {
-	// TODO: we could make this nicer with waiting on divs
-
 	errCh := make(chan error)
 	resCh := make(chan bool)
 
@@ -312,8 +310,6 @@ func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 
 // ListenForMessages listens for new messages by polling every `interval`.
 func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duration) (<-chan Message, <-chan error) {
-	// REVIEW: is this still correct when we get logged out?
-
 	errCh := make(chan error)
 	messageCh := make(chan Message)
 
@@ -346,7 +342,6 @@ func (wi *Instance) ListenForMessages(ctx context.Context, interval time.Duratio
 // SendMessageToChatID sends the given `message` to the chat with the given
 // `chatID`.
 func (wi *Instance) SendMessageToChatID(ctx context.Context, chatID ID, message string) error {
-	// REVIEW: make this safe.
 	str := fmt.Sprintf(
 		"whappGo.sendMessage(%s, %s)",
 		strconv.Quote(chatID.String()),

@@ -1,7 +1,6 @@
 package ircConnection
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -29,20 +28,7 @@ type Connection struct {
 
 	nick string
 
-	socket *net.TCPConn
-}
-
-func sendMessage(socket *net.TCPConn, msg string) error {
-	bytes := []byte(msg + "\n")
-
-	n, err := socket.Write(bytes)
-	if err == nil && n != len(bytes) {
-		err = fmt.Errorf("bytes length mismatch")
-	}
-	if err != nil {
-		log.Printf("error sending irc message: %s", err)
-	}
-	return err
+	irc *irc.Conn
 }
 
 // HandleConnection wraps around the given socket connection, which you
@@ -58,13 +44,13 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 		ctx:     ctx,
 		emitter: &emitter.Emitter{},
 
-		socket: socket,
+		irc: irc.NewConn(socket),
 	}
 
-	// close socket when connection ends
+	// close irc connection when contxt ends
 	go func() {
 		<-ctx.Done()
-		socket.Close()
+		conn.irc.Close()
 	}()
 
 	// listen for and parse messages.
@@ -74,10 +60,8 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 		defer close(conn.receiveCh)
 		defer cancel()
 
-		write := conn.WriteNow
-		decoder := irc.NewDecoder(bufio.NewReader(socket))
 		for {
-			msg, err := decoder.Decode()
+			msg, err := conn.irc.Decode()
 			if err != nil {
 				if err != io.EOF {
 					log.Printf("error while listening for IRC messages: %s\n", err)
@@ -106,18 +90,18 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 				conn.Caps.StartNegotiation()
 				switch msg.Params[0] {
 				case "LS":
-					write(":whapp-irc CAP * LS :server-time whapp-irc/replay")
+					conn.WriteNow(":whapp-irc CAP * LS :server-time whapp-irc/replay")
 
 				case "LIST":
 					caps := conn.Caps.List()
-					write(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
+					conn.WriteNow(":whapp-irc CAP * LIST :" + strings.Join(caps, " "))
 
 				case "REQ":
-					for _, cap := range strings.Split(msg.Trailing(), " ") {
-						conn.Caps.Add(cap)
+					for _, c := range strings.Split(msg.Trailing(), " ") {
+						conn.Caps.Add(c)
 					}
 					caps := conn.Caps.List()
-					write(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
+					conn.WriteNow(":whapp-irc CAP * ACK :" + strings.Join(caps, " "))
 
 				case "END":
 					conn.Caps.FinishNegotiation()
@@ -132,6 +116,19 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 	return conn
 }
 
+func write(w io.Writer, msg string) error {
+	bytes := []byte(msg + "\n")
+
+	n, err := w.Write(bytes)
+	if err != nil {
+		return err
+	} else if n != len(bytes) {
+		return fmt.Errorf("bytes length mismatch")
+	}
+
+	return nil
+}
+
 // Write writes the given message with the given timestamp to the connection
 func (conn *Connection) Write(time time.Time, msg string) error {
 	if conn.Caps.Has("server-time") {
@@ -139,8 +136,12 @@ func (conn *Connection) Write(time time.Time, msg string) error {
 		msg = fmt.Sprintf("@time=%s %s", timeFormat, msg)
 	}
 
-	return sendMessage(conn.socket, msg)
-	//conn.ch <- msg
+	if err := write(conn.irc, msg); err != nil {
+		log.Printf("error sending irc message: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 // WriteNow writes the given message with a timestamp of now to the connection.
