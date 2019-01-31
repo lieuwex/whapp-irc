@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
-	"whapp-irc/ircConnection"
 	"whapp-irc/maps"
 	"whapp-irc/types"
 	"whapp-irc/util"
@@ -214,8 +213,12 @@ func (conn *Connection) handleWhappNotification(chatItem types.ChatListItem, msg
 			}
 
 		case "miss":
-			str := ircConnection.FormatPrivateMessage(author, chatItem.Identifier, "-- missed call --")
-			if err := conn.irc.Write(msg.Time(), str); err != nil {
+			if err := conn.irc.PrivateMessage(
+				msg.Time(),
+				author,
+				chatItem.Identifier,
+				"-- missed call --",
+			); err != nil {
 				return err
 			}
 

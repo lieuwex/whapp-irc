@@ -9,8 +9,8 @@ import (
 	"github.com/wangii/emoji"
 )
 
-// FormatPrivateMessage formats the given line for a private message.
-func FormatPrivateMessage(from, to, line string) string {
+// formatPrivateMessage formats the given line for a private message.
+func formatPrivateMessage(from, to, line string) string {
 	return fmt.Sprintf(":%s PRIVMSG %s :%s", from, to, line)
 }
 

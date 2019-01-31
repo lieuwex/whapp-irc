@@ -160,17 +160,18 @@ func (conn *Connection) WriteListNow(messages []string) error {
 	return nil
 }
 
+// PrivateMessage sends the given line as a private message from from, to to, on
+// the the given date.
+func (conn *Connection) PrivateMessage(date time.Time, from, to, line string) error {
+	util.LogMessage(date, from, to, line)
+	msg := formatPrivateMessage(from, to, line)
+	return conn.Write(date, msg)
+}
+
 // Status writes the given message as if sent by 'status' to the current
 // connection.
 func (conn *Connection) Status(body string) error {
-	util.LogMessage(time.Now(), "status", conn.nick, body)
-	msg := FormatPrivateMessage("status", conn.nick, body)
-	return conn.WriteNow(msg)
-}
-
-// ReceiveChannel returns the channel where new messages are sent on.
-func (conn *Connection) ReceiveChannel() <-chan *irc.Message {
-	return conn.receiveCh
+	return conn.PrivateMessage(time.Now(), "status", conn.nick, body)
 }
 
 // setNick sets the current connection's nickname to the given new nick, and
@@ -180,16 +181,21 @@ func (conn *Connection) setNick(nick string) {
 	<-conn.emitter.Emit("nick", nick)
 }
 
-// NickSetChannel returns a channel that fires when the nickname is changed.
-func (conn *Connection) NickSetChannel() <-chan emitter.Event {
-	// REVIEW: should this be `On`?
-	return conn.emitter.Once("nick")
-}
-
 // Nick returns the nickname of the user at the other end of the current
 // connection.
 func (conn *Connection) Nick() string {
 	return conn.nick
+}
+
+// ReceiveChannel returns the channel where new messages are sent on.
+func (conn *Connection) ReceiveChannel() <-chan *irc.Message {
+	return conn.receiveCh
+}
+
+// NickSetChannel returns a channel that fires when the nickname is changed.
+func (conn *Connection) NickSetChannel() <-chan emitter.Event {
+	// REVIEW: should this be `On`?
+	return conn.emitter.Once("nick")
 }
 
 // StopChannel returns a channel that closes when the current connection is

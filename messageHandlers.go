@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"whapp-irc/ircConnection"
 	"whapp-irc/util"
 	"whapp-irc/whapp"
 )
@@ -40,14 +39,16 @@ var handlerNormal = func(conn *Connection, msg Message) error {
 			)
 		}
 
-		str := ircConnection.FormatPrivateMessage(msg.From, msg.To, line)
-		return conn.irc.Write(msg.Time(), str)
+		return conn.irc.PrivateMessage(msg.Time(), msg.From, msg.To, line)
 	}
 
 	for _, line := range lines {
-		util.LogMessage(msg.Time(), msg.From, msg.To, line)
-		str := ircConnection.FormatPrivateMessage(msg.From, msg.To, line)
-		if err := conn.irc.Write(msg.Time(), str); err != nil {
+		if err := conn.irc.PrivateMessage(
+			msg.Time(),
+			msg.From,
+			msg.To,
+			line,
+		); err != nil {
 			return err
 		}
 	}
@@ -70,8 +71,13 @@ var handlerAlternativeReplay = func(conn *Connection, msg Message) error {
 			msg.To,
 			line,
 		)
-		str := ircConnection.FormatPrivateMessage("replay", conn.irc.Nick(), msg)
-		if err := conn.irc.WriteNow(str); err != nil {
+
+		if err := conn.irc.PrivateMessage(
+			time.Now(),
+			"replay",
+			conn.irc.Nick(),
+			msg,
+		); err != nil {
 			return err
 		}
 	}
