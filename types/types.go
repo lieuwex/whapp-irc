@@ -89,15 +89,6 @@ func (c *Chat) HasMessageID(id string) bool {
 	return false
 }
 
-// ChatListItem is the struct stored in a connection per chat item. It is also
-// used to persist the Identifier<->ID mapping on disk.
-type ChatListItem struct {
-	Identifier string   `json:"identifier"`
-	ID         whapp.ID `json:"id"`
-
-	Chat *Chat `json:"-"`
-}
-
 // User represents a user of the bridge.
 type User struct {
 	LocalStorage         map[string]string `json:"localStorage"`

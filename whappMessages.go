@@ -79,7 +79,7 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 		return nil
 	}
 
-	item, has := conn.GetChatByID(msg.Chat.ID)
+	item, has := conn.Chats.ByID(msg.Chat.ID, false)
 	if !has {
 		chat, err := conn.convertChat(ctx, msg.Chat)
 		if err != nil {
@@ -158,7 +158,7 @@ func (conn *Connection) handleWhappNotification(chatItem types.ChatListItem, msg
 			}
 		}
 
-		if info, _ := conn.GetChatByID(id); info.Chat != nil && !info.Chat.IsGroupChat {
+		if info, has := conn.Chats.ByID(id, false); has && !info.Chat.IsGroupChat {
 			return info.Identifier
 		}
 		return id.User

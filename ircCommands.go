@@ -31,7 +31,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			return nil
 		}
 
-		item, has := conn.GetChatByIdentifier(to)
+		item, has := conn.Chats.ByIdentifier(to, true)
 		if !has {
 			return status("unknown chat")
 		}
@@ -49,7 +49,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 	case "JOIN":
 		idents := strings.Split(msg.Params[0], ",")
 		for _, ident := range idents {
-			item, has := conn.GetChatByIdentifier(ident)
+			item, has := conn.Chats.ByIdentifier(ident, true)
 			if !has {
 				return status("chat not found: " + msg.Params[0])
 			}
@@ -62,7 +62,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 	case "PART":
 		idents := strings.Split(msg.Params[0], ",")
 		for _, ident := range idents {
-			item, has := conn.GetChatByIdentifier(ident)
+			item, has := conn.Chats.ByIdentifier(ident, false)
 			if !has {
 				return status("unknown chat")
 			}
@@ -79,7 +79,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 		mode := msg.Params[1]
 		nick := strings.ToLower(msg.Params[2])
 
-		item, has := conn.GetChatByIdentifier(ident)
+		item, has := conn.Chats.ByIdentifier(ident, false)
 		if !has {
 			return status("chat not found")
 		}
@@ -116,7 +116,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 	case "LIST":
 		// TODO: support args
-		for _, item := range conn.chats {
+		for _, item := range conn.Chats.List(false) {
 			nParticipants := len(item.Chat.Participants)
 			if !item.Chat.IsGroupChat {
 				nParticipants = 2
@@ -135,8 +135,8 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 
 	case "WHO":
 		identifier := msg.Params[0]
-		item, _ := conn.GetChatByIdentifier(identifier)
-		if item.Chat != nil && item.Chat.IsGroupChat {
+		item, has := conn.Chats.ByIdentifier(identifier, false)
+		if has && item.Chat.IsGroupChat {
 			for _, p := range item.Chat.Participants {
 				if p.Contact.IsMe {
 					continue
@@ -167,7 +167,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 		write(fmt.Sprintf(":whapp-irc 315 %s %s :End of /WHO list.", conn.irc.Nick(), identifier))
 
 	case "WHOIS": // TODO: fix
-		item, _ := conn.GetChatByIdentifier(msg.Params[0])
+		item, _ := conn.Chats.ByIdentifier(msg.Params[0], false)
 		chat := item.Chat
 
 		if chat == nil || chat.IsGroupChat {
@@ -199,7 +199,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 				}
 
 				identifier := chat.Identifier()
-				if info, has := conn.GetChatByID(chat.ID); has {
+				if info, has := conn.Chats.ByID(chat.ID, true); has {
 					identifier = info.Identifier
 				}
 				names = append(names, identifier)
@@ -220,8 +220,8 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 		chatIdentifier := msg.Params[0]
 		nick := strings.ToLower(msg.Params[1])
 
-		item, _ := conn.GetChatByIdentifier(chatIdentifier)
-		if item.Chat == nil || !item.Chat.IsGroupChat {
+		item, has := conn.Chats.ByIdentifier(chatIdentifier, false)
+		if !has || !item.Chat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 403 %s %s :No such channel",
 				conn.irc.Nick(),
@@ -252,8 +252,8 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 		nick := msg.Params[0]
 		chatIdentifier := msg.Params[1]
 
-		item, _ := conn.GetChatByIdentifier(chatIdentifier)
-		if item.Chat == nil || !item.Chat.IsGroupChat {
+		item, has := conn.Chats.ByIdentifier(chatIdentifier, false)
+		if !has || !item.Chat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 442 %s %s :You're not on that channel",
 				conn.irc.Nick(),
@@ -261,8 +261,8 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			)
 			return write(str)
 		}
-		personChatInfo, _ := conn.GetChatByIdentifier(nick)
-		if personChatInfo.Chat == nil || personChatInfo.Chat.IsGroupChat {
+		personChatInfo, has := conn.Chats.ByIdentifier(nick, false)
+		if !has || personChatInfo.Chat.IsGroupChat {
 			str := fmt.Sprintf(
 				":whapp-irc 401 %s %s :No such nick/channel",
 				conn.irc.Nick(),

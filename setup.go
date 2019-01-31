@@ -24,7 +24,8 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 	}
 
 	conn := &Connection{
-		WI: wi,
+		WI:    wi,
+		Chats: &types.ChatList{},
 
 		irc: irc,
 
@@ -39,7 +40,7 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 		return nil, err
 	} else if found {
 		conn.timestampMap.Swap(user.LastReceivedReceipts)
-		conn.chats = user.Chats
+		conn.Chats = types.FromList(user.Chats)
 
 		conn.irc.Status("logging in using stored session")
 

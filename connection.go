@@ -8,7 +8,6 @@ import (
 	"math"
 	"net"
 	"strings"
-	"sync"
 	"time"
 	"whapp-irc/ircConnection"
 	"whapp-irc/timestampMap"
@@ -23,7 +22,8 @@ const ircMessageQueueSize = 10
 
 // A Connection represents the internal state of a whapp-irc connection.
 type Connection struct {
-	WI *whapp.Instance
+	WI    *whapp.Instance
+	Chats *types.ChatList
 
 	irc *ircConnection.Connection
 
@@ -31,9 +31,6 @@ type Connection struct {
 
 	me           whapp.Me
 	localStorage map[string]string
-
-	m     sync.RWMutex
-	chats []types.ChatListItem
 }
 
 // BindSocket binds the given TCP connection.
@@ -131,12 +128,8 @@ func BindSocket(socket *net.TCPConn) error {
 
 	// replay older messages
 	empty := conn.timestampMap.Length() == 0
-	for _, item := range conn.chats {
+	for _, item := range conn.Chats.List(false) {
 		c := item.Chat
-		if c == nil {
-			log.Printf("replay: item.chat == nil: %#v", item)
-			continue
-		}
 
 		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
@@ -311,34 +304,6 @@ func (conn *Connection) joinChat(item types.ChatListItem) error {
 	return nil
 }
 
-// GetChatByID returns the chat with the given ID, if any.
-func (conn *Connection) GetChatByID(ID whapp.ID) (item types.ChatListItem, found bool) {
-	conn.m.RLock()
-	defer conn.m.RUnlock()
-
-	for _, item := range conn.chats {
-		if item.ID == ID {
-			return item, true
-		}
-	}
-	return types.ChatListItem{}, false
-}
-
-// GetChatByIdentifier returns the chat with the given identifier, if any.
-func (conn *Connection) GetChatByIdentifier(identifier string) (item types.ChatListItem, found bool) {
-	conn.m.RLock()
-	defer conn.m.RUnlock()
-
-	identifier = strings.ToLower(identifier)
-
-	for _, item := range conn.chats {
-		if strings.ToLower(item.Identifier) == identifier {
-			return item, true
-		}
-	}
-	return types.ChatListItem{}, false
-}
-
 func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*types.Chat, error) {
 	participants, err := chat.Participants(ctx, conn.WI)
 	if err != nil {
@@ -361,67 +326,30 @@ func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*type
 	}, nil
 }
 
-func (conn *Connection) addChat(chat *types.Chat) (res types.ChatListItem) {
-	identifier := chat.Identifier()
-	identifierLower := strings.ToLower(identifier)
-	n := 0 // number of other chats with the same identifier
+func (conn *Connection) addChat(chat *types.Chat) types.ChatListItem {
+	item, isNew := conn.Chats.Add(chat)
 
-	conn.m.Lock()
-	defer conn.m.Unlock()
-
-	defer func() {
-		if chat.IsGroupChat {
+	if isNew {
+		if item.Chat.IsGroupChat {
 			log.Printf(
 				"%-30s %3d participants\n",
-				res.Identifier,
-				len(res.Chat.Participants),
+				item.Identifier,
+				len(item.Chat.Participants),
 			)
 		} else {
-			log.Println(res.Identifier)
-		}
-	}()
-
-	for i, item := range conn.chats {
-		// same chat as we already have, overwrite
-		if item.ID == chat.ID {
-			item.Chat = chat
-			conn.chats[i] = item
-			return item
-		}
-
-		if item.Chat != nil &&
-			strings.ToLower(item.Chat.Identifier()) == identifierLower {
-			n++
+			log.Println(item.Identifier)
 		}
 	}
 
-	// if there's another chat with the same identifier, append an unique
-	// number.
-	if n > 0 {
-		identifier = fmt.Sprintf("%s_%d", identifier, n+1)
-	}
-
-	// chat is new, append it to the list
-	item := types.ChatListItem{
-		Identifier: identifier,
-		ID:         chat.ID,
-
-		Chat: chat,
-	}
-	conn.chats = append(conn.chats, item)
 	go conn.saveDatabaseEntry()
-
 	return item
 }
 
 func (conn *Connection) saveDatabaseEntry() error {
-	conn.m.RLock()
-	defer conn.m.RUnlock()
-
 	err := userDb.SaveItem(conn.irc.Nick(), types.User{
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
-		Chats:                conn.chats,
+		Chats:                conn.Chats.List(true),
 	})
 	util.LogIfErr("error while updating user entry", err)
 	return err
