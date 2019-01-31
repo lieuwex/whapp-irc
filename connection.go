@@ -60,6 +60,10 @@ func BindSocket(socket *net.TCPConn) error {
 	case <-irc.NickSetChannel():
 	}
 
+	if irc.Nick() == "" {
+		return fmt.Errorf("nickname can't be empty")
+	}
+
 	// send welcome message
 	if err := irc.WriteListNow([]string{
 		fmt.Sprintf(":whapp-irc 001 %s :Welcome to whapp-irc, %s.", irc.Nick(), irc.Nick()),
