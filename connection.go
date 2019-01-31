@@ -133,6 +133,10 @@ func BindSocket(socket *net.TCPConn) error {
 	empty := conn.timestampMap.Length() == 0
 	for _, item := range conn.chats {
 		c := item.Chat
+		if c == nil {
+			log.Printf("replay: item.chat == nil: %#v", item)
+			continue
+		}
 
 		prevTimestamp, found := conn.timestampMap.Get(c.ID)
 
