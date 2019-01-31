@@ -176,7 +176,7 @@ func BindSocket(socket *net.TCPConn) error {
 	go func() {
 		defer cancel()
 
-		resCh, errCh := conn.WI.ListenLoggedIn(ctx, time.Second)
+		resCh, errCh := conn.WI.ListenLoggedIn(ctx, 3*time.Second)
 
 		for {
 			select {
