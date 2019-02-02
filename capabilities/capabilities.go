@@ -10,7 +10,7 @@ import (
 type Map struct {
 	finishedCh chan interface{}
 
-	m sync.RWMutex
+	mu sync.RWMutex
 
 	started  bool
 	finished bool
@@ -27,8 +27,8 @@ func MakeMap() *Map {
 
 // Add adds the given capability to the map.
 func (cm *Map) Add(cap string) {
-	cm.m.Lock()
-	defer cm.m.Unlock()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	cap = strings.TrimSpace(cap)
 	cm.caps = append(cm.caps, cap)
@@ -36,8 +36,8 @@ func (cm *Map) Add(cap string) {
 
 // Has returns whether or not the given capability has been negotiated.
 func (cm *Map) Has(cap string) bool {
-	cm.m.RLock()
-	defer cm.m.RUnlock()
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	cap = strings.ToUpper(cap)
 	for _, x := range cm.caps {
@@ -50,8 +50,8 @@ func (cm *Map) Has(cap string) bool {
 
 // List returns all the negotiated capabilities.
 func (cm *Map) List() []string {
-	cm.m.RLock()
-	defer cm.m.RUnlock()
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	res := make([]string, len(cm.caps))
 	copy(res, cm.caps)
@@ -60,8 +60,8 @@ func (cm *Map) List() []string {
 
 // StartNegotiation notifies others that the negotiation process has started.
 func (cm *Map) StartNegotiation() bool {
-	cm.m.Lock()
-	defer cm.m.Unlock()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	if cm.started || cm.finished {
 		return false
@@ -73,8 +73,8 @@ func (cm *Map) StartNegotiation() bool {
 
 // FinishNegotiation notifies others that the negotiation process has finished.
 func (cm *Map) FinishNegotiation() bool {
-	cm.m.Lock()
-	defer cm.m.Unlock()
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	if cm.finished {
 		return false
@@ -88,8 +88,8 @@ func (cm *Map) FinishNegotiation() bool {
 // StartedNegotiation returns whether or not the negotiation process has been
 // started (yet).
 func (cm *Map) StartedNegotiation() bool {
-	cm.m.RLock()
-	defer cm.m.RUnlock()
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	return cm.started
 }

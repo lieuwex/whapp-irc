@@ -89,7 +89,7 @@ func (c *Chat) HasMessageID(id string) bool {
 	return false
 }
 
-// User represents a user of the bridge.
+// User represents the on-disk format of an user of the bridge.
 type User struct {
 	LocalStorage         map[string]string `json:"localStorage"`
 	LastReceivedReceipts map[string]int64  `json:"lastReceivedReceipts"`

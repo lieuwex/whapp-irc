@@ -33,12 +33,12 @@ type ChatListItem struct {
 
 // ChatList is a list of chats with some info.
 type ChatList struct {
-	m     sync.RWMutex
+	mu    sync.RWMutex
 	chats []ChatListItem
 }
 
-// FromList returns a new ChatList based on the given ChatListItem slice.
-func FromList(chats []ChatListItem) *ChatList {
+// ChatListFromSlice returns a new ChatList based on the given ChatListItem slice.
+func ChatListFromSlice(chats []ChatListItem) *ChatList {
 	return &ChatList{
 		chats: chats,
 	}
@@ -50,8 +50,8 @@ func (l *ChatList) Add(chat *Chat) (res ChatListItem, isNew bool) {
 	identifierLower := strings.ToLower(identifier)
 	n := 0 // number of other chats with the same identifier
 
-	l.m.Lock()
-	defer l.m.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	for i, item := range l.chats {
 		// same chat as we already have, overwrite
@@ -89,8 +89,8 @@ func (l *ChatList) Add(chat *Chat) (res ChatListItem, isNew bool) {
 // includeNil is true also items where the chat instance is nil will be
 // returned.
 func (l *ChatList) List(includeNil bool) []ChatListItem {
-	l.m.RLock()
-	defer l.m.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
 	res := make([]ChatListItem, 0, len(l.chats))
 	for _, c := range l.chats {
@@ -105,8 +105,8 @@ func (l *ChatList) List(includeNil bool) []ChatListItem {
 
 // ByID returns the chat with the given ID, if any.
 func (l *ChatList) ByID(id whapp.ID, allowNil bool) (item ChatListItem, found bool) {
-	l.m.RLock()
-	defer l.m.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
 	for _, item := range l.chats {
 		if item.ID != id {
@@ -122,8 +122,8 @@ func (l *ChatList) ByID(id whapp.ID, allowNil bool) (item ChatListItem, found bo
 
 // ByIdentifier returns the chat with the given identifier, if any.
 func (l *ChatList) ByIdentifier(identifier string, allowNil bool) (item ChatListItem, found bool) {
-	l.m.RLock()
-	defer l.m.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
 	identifier = strings.ToLower(identifier)
 
