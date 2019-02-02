@@ -11,14 +11,14 @@ import (
 // Message represents a WhatsApp message, with some basic formatting for IRC.
 type Message struct {
 	From, To string
-	Message  string
+	Body     string
 	IsReply  bool
-	Original *whapp.Message
+	Message  *whapp.Message
 }
 
-// Time returns the time the message has been sent.
-func (msg Message) Time() time.Time {
-	return msg.Original.Time()
+// Quoted returns the quoted WhatsApp message.
+func (msg *Message) Quoted() *whapp.Message {
+	return msg.Message.QuotedMessageObject
 }
 
 // MessageHandler represents a handler for a WhatsApp message to be sent to an
@@ -26,7 +26,8 @@ func (msg Message) Time() time.Time {
 type MessageHandler func(conn *Connection, msg Message) error
 
 var handlerNormal = func(conn *Connection, msg Message) error {
-	lines := strings.Split(msg.Message, "\n")
+	lines := strings.Split(msg.Body, "\n")
+	time := msg.Message.Time()
 
 	if msg.IsReply {
 		line := "> " + lines[0]
@@ -39,12 +40,12 @@ var handlerNormal = func(conn *Connection, msg Message) error {
 			)
 		}
 
-		return conn.irc.PrivateMessage(msg.Time(), msg.From, msg.To, line)
+		return conn.irc.PrivateMessage(time, msg.From, msg.To, line)
 	}
 
 	for _, line := range lines {
 		if err := conn.irc.PrivateMessage(
-			msg.Time(),
+			time,
 			msg.From,
 			msg.To,
 			line,
@@ -61,12 +62,12 @@ var handlerAlternativeReplay = func(conn *Connection, msg Message) error {
 		return nil
 	}
 
-	for _, line := range strings.Split(msg.Message, "\n") {
-		util.LogMessage(msg.Time(), msg.From, msg.To, line)
+	for _, line := range strings.Split(msg.Body, "\n") {
+		util.LogMessage(msg.Message.Time(), msg.From, msg.To, line)
 
 		msg := fmt.Sprintf(
 			"(%s) %s->%s: %s",
-			msg.Time().Format("2006-01-02 15:04:05"),
+			msg.Message.Time().Format("2006-01-02 15:04:05"),
 			msg.From,
 			msg.To,
 			line,

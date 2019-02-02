@@ -132,7 +132,7 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 
 	if msg.QuotedMessageObject != nil {
 		body := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
-		message := Message{from, to, body, true, msg.QuotedMessageObject}
+		message := Message{from, to, body, true, &msg}
 		if err := fn(conn, message); err != nil {
 			return err
 		}
