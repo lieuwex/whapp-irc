@@ -106,16 +106,15 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 		go conn.saveDatabaseEntry()
 	}
 
-	if msg.IsNotification {
+	if msg.IsSentByMeFromWeb {
+		return nil
+	} else if msg.IsNotification {
 		return conn.handleWhappNotification(item, msg)
 	}
 
 	sender := formatContact(*msg.Sender)
 	from := sender.SafeName()
-
-	if msg.IsSentByMeFromWeb {
-		return nil
-	} else if msg.IsSentByMe {
+	if msg.IsSentByMe {
 		from = conn.irc.Nick()
 	}
 
@@ -130,8 +129,8 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 		return err
 	}
 
-	if msg.QuotedMessageObject != nil {
-		body := getMessageBody(*msg.QuotedMessageObject, chat.Participants, conn.me)
+	if msg.QuotedMessage != nil {
+		body := getMessageBody(*msg.QuotedMessage, chat.Participants, conn.me)
 		message := Message{from, to, body, true, &msg}
 		if err := fn(conn, message); err != nil {
 			return err

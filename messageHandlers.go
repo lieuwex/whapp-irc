@@ -18,7 +18,7 @@ type Message struct {
 
 // Quoted returns the quoted WhatsApp message.
 func (msg *Message) Quoted() *whapp.Message {
-	return msg.Message.QuotedMessageObject
+	return msg.Message.QuotedMessage
 }
 
 // MessageHandler represents a handler for a WhatsApp message to be sent to an

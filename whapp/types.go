@@ -227,7 +227,7 @@ type Message struct {
 
 	PDFPageCount uint `json:"pageCount"`
 
-	QuotedMessageObject *Message `json:"quotedMsgObj"`
+	QuotedMessage *Message `json:"quotedMsgObj"`
 
 	Chat Chat `json:"chat"`
 }
