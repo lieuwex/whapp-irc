@@ -7,6 +7,21 @@ import (
 	"whapp-irc/whapp"
 )
 
+// getIdentifierPrefix returns the given identifier, but stripping the last _
+// and everything after it. This is useful to strip the number from the
+// identifier and thus getting the original identifier.
+func getIdentifierPrefix(identifier string) string {
+	// REVIEW: this luckily works since we don't have _ in channel names, but
+	// actually we should have them (since they're perfectly legal in IRC), so
+	// we have to find a way better way of doing this.
+
+	i := strings.LastIndex(identifier, "_")
+	if i > -1 {
+		identifier = identifier[:i]
+	}
+	return identifier
+}
+
 // ChatListItem is the struct stored in a connection per chat item. It is also
 // used to persist the Identifier<->ID mapping on disk.
 type ChatListItem struct {
@@ -46,8 +61,8 @@ func (l *ChatList) Add(chat *Chat) (res ChatListItem, isNew bool) {
 			return item, false
 		}
 
-		if item.Chat != nil &&
-			strings.ToLower(item.Chat.Identifier()) == identifierLower {
+		ident := getIdentifierPrefix(item.Identifier)
+		if strings.ToLower(ident) == identifierLower {
 			n++
 		}
 	}
