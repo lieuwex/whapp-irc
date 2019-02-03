@@ -126,15 +126,15 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 		go func(i int, raw whapp.Chat) {
 			defer wg.Done()
 
-			chat, err := conn.convertChat(ctx, raw)
+			participants, err := raw.Participants(ctx, conn.WI)
 			if err != nil {
-				str := fmt.Sprintf("error while converting chat with ID %s, skipping", raw.ID)
+				str := fmt.Sprintf("error while fetching participants for chat with ID %s, skipping", raw.ID)
 				conn.irc.Status(str)
 				log.Printf("%s. error: %s", str, err)
 				return
 			}
 
-			chats[i] = chat
+			chats[i] = conn.convertChat(raw, participants)
 		}(i, raw)
 	}
 	wg.Wait()

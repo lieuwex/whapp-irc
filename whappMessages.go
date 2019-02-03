@@ -81,11 +81,11 @@ func (conn *Connection) handleWhappMessage(ctx context.Context, msg whapp.Messag
 
 	item, has := conn.Chats.ByID(msg.Chat.ID, false)
 	if !has {
-		chat, err := conn.convertChat(ctx, msg.Chat)
+		participants, err := msg.Chat.Participants(ctx, conn.WI)
 		if err != nil {
 			return err
 		}
-		item = conn.addChat(chat)
+		item = conn.addChat(conn.convertChat(msg.Chat, participants))
 	}
 	chat := item.Chat
 

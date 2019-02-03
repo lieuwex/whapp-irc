@@ -304,12 +304,10 @@ func (conn *Connection) joinChat(item types.ChatListItem) error {
 	return nil
 }
 
-func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*types.Chat, error) {
-	participants, err := chat.Participants(ctx, conn.WI)
-	if err != nil {
-		return nil, err
-	}
-
+func (conn *Connection) convertChat(
+	chat whapp.Chat,
+	participants []whapp.Participant,
+) *types.Chat {
 	converted := make([]types.Participant, len(participants))
 	for i, p := range participants {
 		converted[i] = types.Participant(p)
@@ -323,25 +321,22 @@ func (conn *Connection) convertChat(ctx context.Context, chat whapp.Chat) (*type
 		Participants: converted,
 
 		RawChat: chat,
-	}, nil
+	}
 }
 
 func (conn *Connection) addChat(chat *types.Chat) types.ChatListItem {
-	item, isNew := conn.Chats.Add(chat)
-
-	if isNew {
-		if item.Chat.IsGroupChat {
-			log.Printf(
-				"%-30s %3d participants\n",
-				item.Identifier,
-				len(item.Chat.Participants),
-			)
-		} else {
-			log.Println(item.Identifier)
-		}
-	}
-
+	item, _ := conn.Chats.Add(chat)
 	go conn.saveDatabaseEntry()
+
+	if item.Chat.IsGroupChat {
+		log.Printf(
+			"%-30s %3d participants\n",
+			item.Identifier,
+			len(item.Chat.Participants),
+		)
+	} else {
+		log.Println(item.Identifier)
+	}
 	return item
 }
 

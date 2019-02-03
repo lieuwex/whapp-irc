@@ -190,14 +190,7 @@ func (conn *Connection) handleIRCCommand(ctx context.Context, msg *irc.Message) 
 			var names []string
 
 			for _, group := range groups {
-				// TODO: this could be more efficient: currently calling
-				// `convertChat` makes it retrieve all participants in the
-				// group, which is obviously not necessary.
-				chat, err := conn.convertChat(ctx, group)
-				if err != nil {
-					continue
-				}
-
+				chat := conn.convertChat(group, nil)
 				identifier := chat.Identifier()
 				if info, has := conn.Chats.ByID(chat.ID, true); has {
 					identifier = info.Identifier
