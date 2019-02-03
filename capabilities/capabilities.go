@@ -27,19 +27,20 @@ func MakeMap() *Map {
 
 // Add adds the given capability to the map.
 func (cm *Map) Add(cap string) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
 	cap = strings.TrimSpace(cap)
+
+	cm.mu.Lock()
 	cm.caps = append(cm.caps, cap)
+	cm.mu.Unlock()
 }
 
 // Has returns whether or not the given capability has been negotiated.
 func (cm *Map) Has(cap string) bool {
+	cap = strings.ToUpper(cap)
+
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
-	cap = strings.ToUpper(cap)
 	for _, x := range cm.caps {
 		if strings.ToUpper(x) == cap {
 			return true
@@ -50,11 +51,12 @@ func (cm *Map) Has(cap string) bool {
 
 // List returns all the negotiated capabilities.
 func (cm *Map) List() []string {
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-
 	res := make([]string, len(cm.caps))
+
+	cm.mu.RLock()
 	copy(res, cm.caps)
+	cm.mu.RUnlock()
+
 	return res
 }
 

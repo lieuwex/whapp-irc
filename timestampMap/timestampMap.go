@@ -37,13 +37,14 @@ func (tm *Map) Set(id whapp.ID, val int64) {
 
 // GetCopy returns a copy of the internal map.
 func (tm *Map) GetCopy() map[string]int64 {
-	tm.mutex.RLock()
-	defer tm.mutex.RUnlock()
-
 	res := make(map[string]int64)
+
+	tm.mutex.RLock()
 	for k, v := range tm.m {
 		res[k] = v
 	}
+	tm.mutex.RUnlock()
+
 	return res
 }
 

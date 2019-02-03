@@ -164,7 +164,7 @@ func (fs *FileServer) AddBlob(hash, ext string, bytes []byte) (File, error) {
 
 	fs.mutex.Lock()
 	fs.hashToPath[hash] = f
-	defer fs.mutex.Unlock()
+	fs.mutex.Unlock()
 
 	return f, nil
 }

@@ -122,10 +122,10 @@ func (l *ChatList) ByID(id whapp.ID, allowNil bool) (item ChatListItem, found bo
 
 // ByIdentifier returns the chat with the given identifier, if any.
 func (l *ChatList) ByIdentifier(identifier string, allowNil bool) (item ChatListItem, found bool) {
+	identifier = strings.ToLower(identifier)
+
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-
-	identifier = strings.ToLower(identifier)
 
 	for _, item := range l.chats {
 		if strings.ToLower(item.Identifier) != identifier {
