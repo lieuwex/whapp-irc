@@ -46,11 +46,10 @@ func main() {
 		panic(err)
 	}
 	go func() {
-		if err := fs.Start(); err != nil {
-			log.Fatalf("error while starting fileserver: %s", err)
+		if err := fs.Serve(); err != nil {
+			log.Fatalf("error while serving fileserver: %s", err)
 		}
 	}()
-	defer fs.Stop()
 
 	pool, err = func() (*chromedp.Pool, error) {
 		switch conf.LogLevel {

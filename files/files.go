@@ -23,8 +23,6 @@ type FileServer struct {
 	UseHTTPS  bool
 	Directory string
 
-	httpServer *http.Server
-
 	mutex      sync.RWMutex
 	hashToPath map[string]File
 }
@@ -87,24 +85,14 @@ func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) 
 	return fs, nil
 }
 
-// Start starts the current FileServer.
-func (fs *FileServer) Start() error {
-	fs.httpServer = &http.Server{
+// Serve starts the current FileServer.
+func (fs *FileServer) Serve() error {
+	httpServer := &http.Server{
 		Addr:    ":" + fs.Port,
 		Handler: noDirListing(http.FileServer(http.Dir(fs.Directory))),
 	}
 
-	return fs.httpServer.ListenAndServe()
-}
-
-// Stop stops the current FileServer.
-func (fs *FileServer) Stop() error {
-	if err := fs.httpServer.Close(); err != nil {
-		return err
-	}
-
-	fs.httpServer = nil
-	return nil
+	return httpServer.ListenAndServe()
 }
 
 func (fs *FileServer) makeFile(hash, ext string) (File, error) {
@@ -135,12 +123,10 @@ func (fs *FileServer) makeFile(hash, ext string) (File, error) {
 		url = fmt.Sprintf("%s://%s:%s/%s", protocol, fs.Host, fs.Port, fname)
 	}
 
-	path := fmt.Sprintf("./%s/%s", fs.Directory, fname)
-
 	return File{
 		Hash: hash,
 		URL:  url,
-		Path: path,
+		Path: fmt.Sprintf("./%s/%s", fs.Directory, fname),
 	}, nil
 }
 
