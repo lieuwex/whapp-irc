@@ -177,7 +177,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 
 			const messages = chat.msgs.models;
 			for (let i = messages.length - 1; i >= 0; i--) {
-				let msg = messages[i];
+				const msg = messages[i];
 				if (msg == null) {
 					continue;
 				}
@@ -194,10 +194,7 @@ func (wi *Instance) inject(ctx context.Context) error {
 					continue;
 				}
 
-				msg = whappGo.msgToJSON(msg);
-
-				console.log(msg);
-				res.unshift(msg);
+				res.unshift(whappGo.msgToJSON(msg));
 			}
 		}
 
