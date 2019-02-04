@@ -38,7 +38,9 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
+		println("catch")
 		pprof.StopCPUProfile()
+		println("saved")
 		os.Exit(0)
 	}()
 
