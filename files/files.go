@@ -95,6 +95,19 @@ func (fs *FileServer) Serve() error {
 	return httpServer.ListenAndServe()
 }
 
+func (fs *FileServer) getURL(fname string) string {
+	protocol := "http"
+	if fs.UseHTTPS {
+		protocol = "https"
+	}
+
+	if fs.Port == "80" {
+		return fmt.Sprintf("%s://%s/%s", protocol, fs.Host, fname)
+	}
+
+	return fmt.Sprintf("%s://%s:%s/%s", protocol, fs.Host, fs.Port, fname)
+}
+
 func (fs *FileServer) makeFile(hash, ext string) (File, error) {
 	if hash == "" {
 		return File{}, ErrHashEmpty
@@ -105,27 +118,14 @@ func (fs *FileServer) makeFile(hash, ext string) (File, error) {
 		urlHash = hash
 	}
 
-	var fname string
+	fname := urlHash
 	if ext != "" {
-		fname = urlHash + "." + ext
-	} else {
-		fname = urlHash
-	}
-
-	protocol := "http"
-	if fs.UseHTTPS {
-		protocol = "https"
-	}
-	var url string
-	if fs.Port == "80" {
-		url = fmt.Sprintf("%s://%s/%s", protocol, fs.Host, fname)
-	} else {
-		url = fmt.Sprintf("%s://%s:%s/%s", protocol, fs.Host, fs.Port, fname)
+		fname += "." + ext
 	}
 
 	return File{
 		Hash: hash,
-		URL:  url,
+		URL:  fs.getURL(fname),
 		Path: fmt.Sprintf("./%s/%s", fs.Directory, fname),
 	}, nil
 }
