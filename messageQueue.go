@@ -32,7 +32,7 @@ func GetMessageQueue(ctx context.Context, ch <-chan whapp.Message, queueSize int
 					return
 				}
 
-				ch := make(chan MessageRes)
+				ch := make(chan MessageRes, 1)
 				queue <- ch
 
 				go func() {
