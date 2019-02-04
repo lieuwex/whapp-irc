@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"runtime/pprof"
 	"time"
 	"whapp-irc/config"
 	"whapp-irc/database"
@@ -24,7 +27,20 @@ var (
 )
 
 func main() {
-	var err error
+	f, err := os.Create("cpu.profile")
+	if err != nil {
+		panic(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		pprof.StopCPUProfile()
+		os.Exit(0)
+	}()
 
 	conf, err = config.ReadEnvVars()
 	if err != nil {
