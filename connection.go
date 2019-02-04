@@ -215,8 +215,7 @@ func BindSocket(socket *net.TCPConn) error {
 				util.LogIfErr("error while listening for whatsapp messages", err)
 				return
 
-			case msgFut := <-queue:
-				msgRes := <-msgFut
+			case msgRes := <-<-queue:
 				if msgRes.Err == nil {
 					msgRes.Err = conn.handleWhappMessage(
 						ctx,
