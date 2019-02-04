@@ -4,7 +4,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"runtime/pprof"
 	"time"
 	"whapp-irc/config"
@@ -33,16 +32,6 @@ func main() {
 	}
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		println("catch")
-		pprof.StopCPUProfile()
-		println("saved")
-		os.Exit(0)
-	}()
 
 	conf, err = config.ReadEnvVars()
 	if err != nil {
@@ -80,7 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer pool.Shutdown()
+	//defer pool.Shutdown()
 
 	addr, err := net.ResolveTCPAddr("tcp", ":"+conf.IRCPort)
 	if err != nil {
@@ -99,10 +88,10 @@ func main() {
 			continue
 		}
 
-		go func() {
-			if err := BindSocket(socket); err != nil {
-				log.Println(err)
-			}
-		}()
+		if err := BindSocket(socket); err != nil {
+			log.Println(err)
+		}
+
+		return
 	}
 }
