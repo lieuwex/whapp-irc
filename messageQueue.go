@@ -12,12 +12,12 @@ type MessageRes struct {
 }
 
 // MessageQueue is a queue containing "futures" to MessageRes instances.
-type MessageQueue chan chan MessageRes
+type MessageQueue <-chan chan MessageRes
 
 // GetMessageQueue wraps around the given WhatsApp message channel and makes a
 // queue, queueing a maximum of queueSize items.
 func GetMessageQueue(ctx context.Context, ch <-chan whapp.Message, queueSize int) MessageQueue {
-	queue := make(MessageQueue, queueSize)
+	queue := make(chan chan MessageRes, queueSize)
 
 	go func() {
 		defer close(queue)
