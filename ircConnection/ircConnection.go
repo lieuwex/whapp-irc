@@ -22,11 +22,13 @@ type Connection struct {
 	Caps *capabilities.Map
 
 	receiveCh chan *irc.Message
+	passCh    chan interface{}
 
 	ctx     context.Context
 	emitter *emitter.Emitter
 
 	nick string
+	pass string
 
 	irc *irc.Conn
 }
@@ -40,6 +42,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 		Caps: capabilities.MakeMap(),
 
 		receiveCh: make(chan *irc.Message, queueSize),
+		passCh:    make(chan interface{}),
 
 		ctx:     ctx,
 		emitter: &emitter.Emitter{},
@@ -85,6 +88,13 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 
 			case "NICK":
 				conn.setNick(msg.Params[0])
+
+			case "PASS":
+				conn.pass = ""
+				if len(msg.Params) > 0 {
+					conn.pass = msg.Params[0]
+				}
+				close(conn.passCh)
 
 			case "CAP":
 				conn.Caps.StartNegotiation()
@@ -181,10 +191,22 @@ func (conn *Connection) setNick(nick string) {
 	<-conn.emitter.Emit("nick", nick)
 }
 
+// setPass sets the current connection's password to the given new pass, and
+// notifies any listeners.
+func (conn *Connection) setPass(pass string) {
+	<-conn.emitter.Emit("pass", pass)
+}
+
 // Nick returns the nickname of the user at the other end of the current
 // connection.
 func (conn *Connection) Nick() string {
 	return conn.nick
+}
+
+// Pass returns the password of the user at the other end of the current
+// connection.
+func (conn *Connection) Pass() string {
+	return conn.pass
 }
 
 // ReceiveChannel returns the channel where new messages are sent on.
@@ -196,6 +218,12 @@ func (conn *Connection) ReceiveChannel() <-chan *irc.Message {
 func (conn *Connection) NickSetChannel() <-chan emitter.Event {
 	// REVIEW: should this be `On`?
 	return conn.emitter.Once("nick")
+}
+
+// PassSetChannel returns a channel that closes when the password is set,
+// nothing is sent over the channel.
+func (conn *Connection) PassSetChannel() <-chan interface{} {
+	return conn.passCh
 }
 
 // StopChannel returns a channel that closes when the current connection is

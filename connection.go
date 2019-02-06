@@ -75,6 +75,40 @@ func BindSocket(socket *net.TCPConn) error {
 		return err
 	}
 
+	var user types.User
+	if found, err := userDb.GetItem(
+		irc.Nick(),
+		&user,
+	); err == nil && found && user.Password != "" {
+		// we've found an user with a password, so the current connection should
+		// also provide a password.
+
+		// passErr notifies the connection that the provided password is
+		// incorrect, or none have been provided but should've been.
+		passErr := func(goodErr error) error {
+			msg := fmt.Sprintf(":whapp-irc 464 %s :Password incorrect", irc.Nick())
+			if err := irc.WriteNow(msg); err != nil {
+				return err
+			}
+			return goodErr
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case <-time.After(5 * time.Second):
+			err := fmt.Errorf("password expected, but client timed out")
+			return passErr(err)
+
+		case <-irc.PassSetChannel():
+			if irc.Pass() != user.Password {
+				err := fmt.Errorf("client provided password incorrect")
+				return passErr(err)
+			}
+		}
+	}
+
 	// setup bridge and connection
 	conn, err := setupConnection(ctx, irc)
 	if err != nil {
@@ -341,6 +375,7 @@ func (conn *Connection) addChat(chat *types.Chat) types.ChatListItem {
 
 func (conn *Connection) saveDatabaseEntry() error {
 	err := userDb.SaveItem(conn.irc.Nick(), types.User{
+		Password:             conn.irc.Pass(),
 		LocalStorage:         conn.localStorage,
 		LastReceivedReceipts: conn.timestampMap.GetCopy(),
 		Chats:                conn.Chats.List(true),
