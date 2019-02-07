@@ -71,5 +71,5 @@ func (db *Database) SaveItem(id string, item interface{}) error {
 	unlock := db.lockMap.Lock(id)
 	defer unlock()
 
-	return ioutil.WriteFile(db.getPath(id), bytes, 0777)
+	return ioutil.WriteFile(db.getPath(id), bytes, 0600)
 }
