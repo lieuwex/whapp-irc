@@ -61,7 +61,7 @@ docker run -d \
 ## local build
 if you want to build whapp-irc locally (no guaranty it works with your chromium
 version and what not), make sure you have go, dep, and chromium.
-Then, clone the repo in your `$GOPATH` and run: `./make.sh`.
+Then, clone the repo in your `$GOPATH` and run: `./make.bash`.
 
 ## support
 `#whapp-irc` on freenode, you can mention lieuwex if nobody responds.
