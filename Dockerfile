@@ -10,7 +10,7 @@ WORKDIR /go/src/whapp-irc/
 RUN dep ensure -vendor-only
 
 # Apply chromedp patches
-COPY *.patch ./
+COPY patches/*.patch ./
 RUN cat *.patch | patch -p1
 
 # Build whapp-irc
