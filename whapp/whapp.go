@@ -1,3 +1,5 @@
+// Package whapp implements a nice library around WhatsApp web, puppeteering a
+// chromium instance.
 package whapp
 
 import (
