@@ -358,8 +358,10 @@ func (conn *Connection) convertChat(
 }
 
 func (conn *Connection) addChat(chat *types.Chat) types.ChatListItem {
-	item, _ := conn.Chats.Add(chat)
-	go conn.saveDatabaseEntry()
+	item, isNew := conn.Chats.Add(chat)
+	if isNew {
+		go conn.saveDatabaseEntry()
+	}
 
 	if item.Chat.IsGroupChat {
 		log.Printf(
@@ -370,6 +372,7 @@ func (conn *Connection) addChat(chat *types.Chat) types.ChatListItem {
 	} else {
 		log.Println(item.Identifier)
 	}
+
 	return item
 }
 
