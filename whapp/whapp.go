@@ -160,11 +160,7 @@ func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, err
 	}
 
 	var res map[string]string
-	if err := json.Unmarshal([]byte(str), &res); err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return res, json.Unmarshal([]byte(str), &res)
 }
 
 // SetLocalStorage adds all keys given by `localStorage` to the localStorage of
@@ -228,12 +224,7 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 		return res, err
 	}
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
+	return res, wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
 }
 
 func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {

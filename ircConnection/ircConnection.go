@@ -50,7 +50,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 		irc: irc.NewConn(socket),
 	}
 
-	// close irc connection when contxt ends
+	// close irc connection when context ends
 	go func() {
 		<-ctx.Done()
 		conn.irc.Close()

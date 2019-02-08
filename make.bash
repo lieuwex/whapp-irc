@@ -17,4 +17,4 @@ go build -ldflags "-X main.commit=$(git rev-list -1 HEAD)" -o whapp-irc
 echo
 echo "build successful."
 echo "make sure chromium is in your path, and run whapp-irc using:"
-printf "\t$ env HOST=$IP whapp-irc\n"
+printf "\t$ env HOST=$IP ./whapp-irc\n"
