@@ -1,4 +1,4 @@
-package ircConnection
+package ircconnection
 
 import (
 	"encoding/hex"
