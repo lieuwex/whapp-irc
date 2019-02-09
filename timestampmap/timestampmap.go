@@ -1,4 +1,4 @@
-package timestampMap
+package timestampmap
 
 import (
 	"sync"
