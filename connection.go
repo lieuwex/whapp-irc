@@ -169,7 +169,6 @@ func BindSocket(socket *net.TCPConn) error {
 
 		if empty || !conn.hasReplay() {
 			conn.timestampMap.Set(c.ID, c.RawChat.Timestamp)
-			go conn.saveDatabaseEntry()
 			continue
 		} else if c.RawChat.Timestamp <= prevTimestamp {
 			continue
@@ -199,6 +198,7 @@ func BindSocket(socket *net.TCPConn) error {
 			util.LogIfErr("error handling older whapp message", err)
 		}
 	}
+	go conn.saveDatabaseEntry()
 
 	conn.irc.Status("ready for new messages")
 
