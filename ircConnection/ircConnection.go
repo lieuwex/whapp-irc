@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 	"whapp-irc/capabilities"
 	"whapp-irc/util"
@@ -63,6 +64,8 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 		defer close(conn.receiveCh)
 		defer cancel()
 
+		var passOnce sync.Once
+
 		for {
 			msg, err := conn.irc.Decode()
 			if err != nil {
@@ -94,7 +97,7 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 				if len(msg.Params) > 0 {
 					conn.pass = msg.Params[0]
 				}
-				close(conn.passCh)
+				passOnce.Do(func() { close(conn.passCh) })
 
 			case "CAP":
 				conn.Caps.StartNegotiation()
