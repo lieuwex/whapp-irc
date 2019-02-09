@@ -171,8 +171,7 @@ func (fs *FileServer) RemoveFile(file File) error {
 // GetFileByHash returns the File struct matching the given hash.
 func (fs *FileServer) GetFileByHash(hash string) (file File, has bool) {
 	fs.mutex.RLock()
-	defer fs.mutex.RUnlock()
-
 	file, has = fs.hashToPath[hash]
+	fs.mutex.RUnlock()
 	return file, has
 }

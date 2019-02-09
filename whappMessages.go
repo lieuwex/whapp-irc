@@ -24,13 +24,15 @@ func getMessageBody(msg whapp.Message, participants []types.Participant, me whap
 		whappParticipants[i] = whapp.Participant(p)
 	}
 
-	if msg.Location != nil {
+	switch {
+	case msg.Location != nil:
 		return maps.ByProvider(
 			conf.MapProvider,
 			msg.Location.Latitude,
 			msg.Location.Longitude,
 		)
-	} else if msg.IsMMS {
+
+	case msg.IsMMS:
 		res := "--file--"
 		if f, has := fs.GetFileByHash(msg.MediaFileHash); has {
 			res = f.URL
@@ -41,13 +43,18 @@ func getMessageBody(msg whapp.Message, participants []types.Participant, me whap
 		}
 
 		return res
-	}
 
-	return msg.FormatBody(whappParticipants, me.Pushname)
+	default:
+		return msg.FormatBody(whappParticipants, me.Pushname)
+	}
 }
 
 func downloadAndStoreMedia(msg whapp.Message) error {
-	if _, has := fs.GetFileByHash(msg.MediaFileHash); msg.IsMMS && !has {
+	if !msg.IsMMS {
+		return nil
+	}
+
+	if _, has := fs.GetFileByHash(msg.MediaFileHash); !has {
 		bytes, err := msg.DownloadMedia()
 		if err != nil {
 			return err

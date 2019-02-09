@@ -130,16 +130,8 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 }
 
 func write(w io.Writer, msg string) error {
-	bytes := []byte(msg + "\n")
-
-	n, err := w.Write(bytes)
-	if err != nil {
-		return err
-	} else if n != len(bytes) {
-		return fmt.Errorf("bytes length mismatch")
-	}
-
-	return nil
+	_, err := w.Write([]byte(msg + "\n"))
+	return err
 }
 
 // Write writes the given message with the given timestamp to the connection
@@ -192,12 +184,6 @@ func (conn *Connection) Status(body string) error {
 func (conn *Connection) setNick(nick string) {
 	conn.nick = nick
 	<-conn.emitter.Emit("nick", nick)
-}
-
-// setPass sets the current connection's password to the given new pass, and
-// notifies any listeners.
-func (conn *Connection) setPass(pass string) {
-	<-conn.emitter.Emit("pass", pass)
 }
 
 // Nick returns the nickname of the user at the other end of the current
