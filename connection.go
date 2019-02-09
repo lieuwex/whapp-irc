@@ -9,8 +9,8 @@ import (
 	"net"
 	"strings"
 	"time"
-	"whapp-irc/ircConnection"
-	"whapp-irc/timestampMap"
+	"whapp-irc/ircconnection"
+	"whapp-irc/timestampmap"
 	"whapp-irc/types"
 	"whapp-irc/util"
 	"whapp-irc/whapp"
@@ -25,9 +25,9 @@ type Connection struct {
 	WI    *whapp.Instance
 	Chats *types.ChatList
 
-	irc *ircConnection.Connection
+	irc *ircconnection.Connection
 
-	timestampMap *timestampMap.Map
+	timestampMap *timestampmap.Map
 
 	me           whapp.Me
 	localStorage map[string]string
@@ -38,7 +38,7 @@ func BindSocket(socket *net.TCPConn) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	irc := ircConnection.HandleConnection(ctx, socket)
+	irc := ircconnection.HandleConnection(ctx, socket)
 
 	// when the irc connection dies or the context is cancelled, kill
 	// everything off

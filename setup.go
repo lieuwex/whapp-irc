@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 	"whapp-irc/bridge"
-	"whapp-irc/ircConnection"
-	"whapp-irc/timestampMap"
+	"whapp-irc/ircconnection"
+	"whapp-irc/timestampmap"
 	"whapp-irc/types"
 	"whapp-irc/util"
 	"whapp-irc/whapp"
@@ -17,7 +17,7 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 )
 
-func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Connection, error) {
+func setupConnection(ctx context.Context, irc *ircconnection.Connection) (*Connection, error) {
 	wi, err := bridge.Start(ctx, pool, conf.LogLevel)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func setupConnection(ctx context.Context, irc *ircConnection.Connection) (*Conne
 
 		irc: irc,
 
-		timestampMap: timestampMap.New(),
+		timestampMap: timestampmap.New(),
 	}
 
 	// if we have the current user in the database, try to relogin using the
