@@ -68,12 +68,12 @@ func HandleConnection(ctx context.Context, socket *net.TCPConn) *Connection {
 
 		for {
 			msg, err := conn.irc.Decode()
-			if err != nil {
-				if err != io.EOF {
-					log.Printf("error while listening for IRC messages: %s\n", err)
-				}
+			if err == io.EOF { // connection closed
 				return
-			} else if msg == nil {
+			} else if err != nil { // socket error
+				log.Printf("error while listening for IRC messages: %s\n", err)
+				return
+			} else if msg == nil { // invalid message
 				log.Println("got invalid IRC message, ignoring")
 				continue
 			}
