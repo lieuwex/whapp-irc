@@ -2,6 +2,7 @@ package files
 
 import (
 	"encoding/base64"
+	"io"
 	"net/http"
 	"path"
 )
@@ -26,6 +27,22 @@ func noDirListing(handler http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if path.Clean(r.URL.Path) == "/" {
 			http.NotFound(w, r)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
+}
+
+var robotstxt = `
+User-agent: *
+Disallow: /
+`
+
+func robots(handler http.Handler) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if path.Clean(r.URL.Path) == "/robots.txt" {
+			io.WriteString(w, robotstxt)
 			return
 		}
 

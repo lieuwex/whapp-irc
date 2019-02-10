@@ -87,9 +87,13 @@ func MakeFileServer(host, port, dir string, useHTTPS bool) (*FileServer, error) 
 
 // Serve starts the current FileServer.
 func (fs *FileServer) Serve() error {
+	handler := http.FileServer(http.Dir(fs.Directory))
+	handler = noDirListing(handler)
+	handler = robots(handler)
+
 	httpServer := &http.Server{
 		Addr:    ":" + fs.Port,
-		Handler: noDirListing(http.FileServer(http.Dir(fs.Directory))),
+		Handler: handler,
 	}
 
 	return httpServer.ListenAndServe()
