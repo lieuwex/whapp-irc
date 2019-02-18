@@ -33,7 +33,7 @@ func (u *poolUnit) Run(ctx context.Context, action chromedp.Action) error {
 func (u *poolUnit) Shutdown(ctx context.Context, opts ...client.Option) error {
 	cdp := u.res.CDP()
 	if err := cdp.Shutdown(ctx); err != nil {
-		return err
+		return errCDP(err)
 	}
 	return u.res.Release()
 }
@@ -80,7 +80,7 @@ func MakeInstance(
 		}
 	}()
 	if err != nil {
-		return nil, err
+		return nil, errCDP(err)
 	}
 
 	return &Instance{
@@ -103,7 +103,7 @@ func MakeInstanceWithPool(
 
 	res, err := pool.Allocate(ctx, options...)
 	if err != nil {
-		return nil, err
+		return nil, errCDP(err)
 	}
 
 	return &Instance{
@@ -117,10 +117,14 @@ func MakeInstanceWithPool(
 
 // Navigate opens a tab with WhatsApp Web, without checking the login state.
 func (wi *Instance) Navigate(ctx context.Context) error {
-	return wi.cdp.Run(ctx, chromedp.Tasks{
+	if err := wi.cdp.Run(ctx, chromedp.Tasks{
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
-	})
+	}); err != nil {
+		return errCDP(err)
+	}
+
+	return nil
 }
 
 // Open opens a tab with WhatsApp Web and returns the current login state.
@@ -134,7 +138,7 @@ func (wi *Instance) Open(ctx context.Context) (LoginState, error) {
 		chromedp.WaitVisible("._2EZ_m, ._3ZW2E"),
 		chromedp.Evaluate("document.getElementsByClassName('_3ZW2E').length > 0", &loggedIn),
 	}); err != nil {
-		return state, err
+		return state, errCDP(err)
 	}
 
 	if loggedIn {
@@ -156,7 +160,7 @@ func (wi *Instance) GetLocalStorage(ctx context.Context) (map[string]string, err
 		ctx,
 		chromedp.Evaluate("JSON.stringify(localStorage)", &str),
 	); err != nil {
-		return nil, err
+		return nil, errCDP(err)
 	}
 
 	var res map[string]string
@@ -174,7 +178,11 @@ func (wi *Instance) SetLocalStorage(ctx context.Context, localStorage map[string
 		tasks = append(tasks, chromedp.Evaluate(str, &idc))
 	}
 
-	return wi.cdp.Run(ctx, tasks)
+	if err := wi.cdp.Run(ctx, tasks); err != nil {
+		return errCDP(err)
+	}
+
+	return nil
 }
 
 // GetLoginCode retrieves the login code for the current instance.
@@ -192,7 +200,7 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 		chromedp.WaitVisible("[alt='Scan me!']"), // wait for QR
 		chromedp.AttributeValue("._2EZ_m", "data-ref", &code, &ok),
 	}); err != nil {
-		return "", err
+		return "", errCDP(err)
 	}
 
 	if !ok {
@@ -206,7 +214,7 @@ func (wi *Instance) GetLoginCode(ctx context.Context) (string, error) {
 // user scanned the QR code and is accepted)
 func (wi *Instance) WaitLogin(ctx context.Context) error {
 	if err := wi.cdp.Run(ctx, chromedp.WaitVisible("._3ZW2E")); err != nil {
-		return err
+		return errCDP(err)
 	}
 	wi.LoginState = Loggedin
 	return nil
@@ -224,7 +232,14 @@ func (wi *Instance) GetMe(ctx context.Context) (Me, error) {
 		return res, err
 	}
 
-	return res, wi.cdp.Run(ctx, chromedp.Evaluate("Store.Conn.toJSON()", &res))
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("Store.Conn.toJSON()", &res),
+	); err != nil {
+		return res, errCDP(err)
+	}
+
+	return res, nil
 }
 
 func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
@@ -234,8 +249,14 @@ func (wi *Instance) getLoggedIn(ctx context.Context) (bool, error) {
 		return res, err
 	}
 
-	action := chromedp.Evaluate("Store.Conn.clientToken != null", &res)
-	return res, wi.cdp.Run(ctx, action)
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate("Store.Conn.clientToken != null", &res),
+	); err != nil {
+		return res, errCDP(err)
+	}
+
+	return res, nil
 }
 
 // ListenLoggedIn listens for login state changes by polling it every
@@ -291,7 +312,7 @@ func (wi *Instance) getNewMessages(ctx context.Context) ([]Message, error) {
 		ctx,
 		chromedp.Evaluate("whappGo.getNewMessages()", &res),
 	); err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	sort.SliceStable(res, func(i, j int) bool {
@@ -360,7 +381,7 @@ func (wi *Instance) GetAllChats(ctx context.Context) ([]Chat, error) {
 		ctx,
 		chromedp.Evaluate("whappGo.getAllChats()", &res),
 	); err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	return res, nil
@@ -382,7 +403,7 @@ func (wi *Instance) GetPhoneActive(ctx context.Context) (bool, error) {
 		ctx,
 		chromedp.Evaluate("whappGo.getPhoneActive()", &res),
 	); err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	return res, nil

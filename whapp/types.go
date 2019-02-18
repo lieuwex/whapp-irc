@@ -123,8 +123,14 @@ func (c Contact) GetCommonGroups(ctx context.Context, wi *Instance) ([]Chat, err
 
 	str := fmt.Sprintf("whappGo.getCommonGroups(%s)", strconv.Quote(c.ID.String()))
 
-	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
-	return res, err
+	if err := wi.cdp.Run(
+		ctx,
+		chromedp.Evaluate(str, &res, awaitPromise),
+	); err != nil {
+		return res, errCDP(err)
+	}
+
+	return res, nil
 }
 
 // Participant represents a participants in a group chat.
@@ -406,7 +412,7 @@ func (c Chat) Participants(ctx context.Context, wi *Instance) ([]Participant, er
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	return res, nil
@@ -430,7 +436,7 @@ func (c Chat) GetPresence(ctx context.Context, wi *Instance) (Presence, error) {
 
 	err := wi.cdp.Run(ctx, chromedp.Evaluate(str, &res, awaitPromise))
 	if err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	return res, nil
@@ -495,7 +501,7 @@ func (c Chat) GetMessagesFromChatTillDate(
 		ctx,
 		chromedp.Evaluate(str, &res, awaitPromise),
 	); err != nil {
-		return res, err
+		return res, errCDP(err)
 	}
 
 	sort.SliceStable(res, func(i, j int) bool {
