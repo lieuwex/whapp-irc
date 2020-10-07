@@ -1,3 +1,9 @@
+# Depreciation
+whapp-irc is not supported anymore, and probably never will be anymore by me.
+Feel free to fork.
+
+https://git.theta.eu.org/eta/whatsxmpp or https://github.com/eeeeeta/sms-irc or https://github.com/tulir/mautrix-whatsapp/ are all alternatives.
+
 # whapp-irc
 _a simple whatsapp web <-> irc gateway_
 
